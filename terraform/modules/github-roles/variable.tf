@@ -14,10 +14,20 @@ variable "federated_oidc_provider_arn" {
 }
 
 variable "custom_conditions" {
-  type    = map(string)
-  default = {}
-}
+  type = map(string)
 
+  validation {
+    condition = (
+      contains(
+        keys(var.custom_conditions),
+        "token.actions.githubusercontent.com:sub"
+      )
+      && try(length(trimspace(var.custom_conditions["token.actions.githubusercontent.com:sub"])) > 0, false)
+    )
+
+    error_message = "The GitHub OIDC subject (sub) condition is required."
+  }
+}
 variable "tags" {
   description = "Github Terrafrom Instance tags"
   type        = map(string)
