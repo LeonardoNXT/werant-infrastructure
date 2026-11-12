@@ -1,4 +1,4 @@
-resource "aws_iam_role" "this" {
+resource "aws_iam_role" "werant_github_oidc_role" {
   name = var.role_name
 
   tags = var.tags
