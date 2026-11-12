@@ -15,10 +15,10 @@ resource "aws_iam_role" "this" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = merge(
+            var.custom_conditions,
             {
               "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
             },
-            var.custom_conditions
           )
         }
       }
