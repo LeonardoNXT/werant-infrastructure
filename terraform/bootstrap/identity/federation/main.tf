@@ -1,6 +1,6 @@
 
 module "aws_federated_provider_oidc" {
-  source = "../../../modules/github-oidc"
+  source = "../../../modules/github-oidc-provider"
 }
 
 module "aws_network_oidc_role_dev" {
