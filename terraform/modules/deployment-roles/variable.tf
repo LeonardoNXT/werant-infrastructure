@@ -1,11 +1,11 @@
 
-variable "resource_name" {
+variable "life_cycle_name" {
   type        = string
   description = "Deployment Role resource name"
 
   validation {
-    condition     = length(trimspace(var.resource_name)) > 0
-    error_message = "resource_name must not be empty."
+    condition     = length(trimspace(var.life_cycle_name)) > 0
+    error_message = "life_cycle_name must not be empty."
   }
 }
 

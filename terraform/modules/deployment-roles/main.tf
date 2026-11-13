@@ -14,8 +14,8 @@ data "aws_iam_policy_document" "werant_deployment_trusted_policy" {
 }
 
 resource "aws_iam_role" "werant_deployment_role" {
-  name               = "${var.resource_name}-terraform-deploy-role"
-  description        = "IAM role assumed by GitHub Actions via cross-account federation to provision and manage ${var.resource_name} infrastructure using Terraform."
+  name               = "${var.life_cycle_name}-terraform-deploy-role"
+  description        = var.role_description
   tags               = var.tags
   assume_role_policy = data.aws_iam_policy_document.werant_deployment_trusted_policy.json
 }

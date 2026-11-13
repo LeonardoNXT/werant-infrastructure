@@ -11,7 +11,7 @@ data "aws_iam_policy_document" "oidc_policy_document" {
 
 resource "aws_iam_policy" "oidc-policy" {
   name        = var.oidc_policy_name
-  description = var.oidc_policy_name
+  description = var.oidc_policy_description
   path        = "/"
   policy      = data.aws_iam_policy_document.oidc_policy_document.json
 }

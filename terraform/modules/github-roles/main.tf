@@ -1,5 +1,6 @@
 resource "aws_iam_role" "werant_github_oidc_role" {
-  name = var.role_name
+  name        = var.role_name
+  description = var.role_description
 
   tags = var.tags
 
