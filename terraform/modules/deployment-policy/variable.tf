@@ -1,11 +1,17 @@
-variable "role_name" {
+variable "policy_name" {
   type        = string
-  description = "Deployment role name"
+  description = "Deployment policy name"
+
+  validation {
+    condition     = length(trimspace(var.policy_name)) > 0
+    error_message = "policy_name must not be empty."
+  }
 }
 
-variable "role_description" {
-  type    = string
-  default = "Deployment role description"
+variable "policy_description" {
+  type        = string
+  description = "Deployment policy description"
+  default     = "Terraform deployment policy"
 }
 
 
@@ -20,7 +26,7 @@ variable "role_statements" {
 
   validation {
     condition = alltrue([
-      for key, statement in var.statements : (
+      for _, statement in var.role_statements : (
         length(trimspace(coalesce(statement.sid, ""))) > 0 &&
         contains(["Allow", "Deny"], statement.effect) &&
         length(statement.actions) > 0 &&

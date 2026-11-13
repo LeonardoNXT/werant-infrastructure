@@ -4,7 +4,7 @@ data "aws_iam_policy_document" "deployment_iam_policy_document" {
 
     content {
       sid       = statement.value.sid
-      effect    = statament.value.effect
+      effect    = statement.value.effect
       actions   = statement.value.actions
       resources = statement.value.resources
     }
@@ -12,8 +12,8 @@ data "aws_iam_policy_document" "deployment_iam_policy_document" {
 }
 
 resource "aws_iam_policy" "deployment_iam_policy" {
-  name        = var.role_name
-  description = var.role_description
+  name        = var.policy_name
+  description = var.policy_description
   policy      = data.aws_iam_policy_document.deployment_iam_policy_document.json
   tags        = var.tags
 }

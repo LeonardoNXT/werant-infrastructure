@@ -20,7 +20,8 @@ data "aws_iam_policy_document" "werant-terraform-state-access-policy-document" {
       variable = "s3:prefix"
 
       values = [
-        var.target_state_key
+        var.target_state_key,
+        "${var.target_state_key}.tflock"
       ]
     }
   }
@@ -53,12 +54,28 @@ data "aws_iam_policy_document" "werant-terraform-state-access-policy-document" {
       "${local.target_state_arn}.tflock"
     ]
   }
+
+  statement {
+    sid    = "UseStateEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:Encrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      var.kms_key_arn
+    ]
+  }
 }
 
 resource "aws_iam_policy" "werant-terraform-state-access-policy" {
-  name        = "TerraformApply"
-  description = "Grants the required permissions to provision, update, and manage AWS infrastructure resources through Terraform."
+  name        = var.policy_name
+  description = "Grants access to one Terraform state object, its lock file, and its encryption key."
 
-  policy = data.aws_iam_policy_document.werant-terraform-apply-policy-document.json
+  policy = data.aws_iam_policy_document.werant-terraform-state-access-policy-document.json
   tags   = var.tags
 }
