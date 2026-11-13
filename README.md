@@ -105,12 +105,8 @@ Federated roles and cross-account execution roles are designed to enforce bounda
 werant-infra/
 │
 ├── .github/
-│   ├── actions/
 │   └── workflows/
-│
-├── pipelines/
-│
-├── scripts/
+│       └── terraform-validate.yml
 │
 └── terraform/
     │
@@ -119,23 +115,11 @@ werant-infra/
     │   └── identity/
     │       └── federation/
     │
-    ├── environments/
-    │   ├── development/
-    │   │   ├── network/
-    │   │   └── compute/
-    │   │
-    │   ├── homologation/
-    │   │   ├── network/
-    │   │   └── compute/
-    │   │
-    │   └── production/
-    │       ├── network/
-    │       └── compute/
-    │
     └── modules/
-        ├── github-oidc/
+        ├── github-oidc-provider/
         ├── github-roles/
-        └── ...
+        ├── deployment-roles/
+        └── terraform-apply-policy/
 ```
 
 The tree illustrates the intended structure. Lifecycle directories and modules are added as their implementations become necessary.
@@ -144,13 +128,11 @@ The tree illustrates the intended structure. Lifecycle directories and modules a
 
 | Directory                | Purpose                                             |
 | :----------------------- | :-------------------------------------------------- |
-| `.github/actions`        | Reusable GitHub composite actions                   |
-| `.github/workflows`      | Workflow definitions and execution triggers         |
-| `pipelines`              | Pipeline orchestration and deployment configuration |
-| `scripts`                | Supporting automation and development utilities     |
+| `.github/workflows`      | Terraform formatting and validation workflow         |
 | `terraform/bootstrap`    | Initial infrastructure and identity provisioning    |
-| `terraform/environments` | Environment-specific Terraform root modules         |
 | `terraform/modules`      | Reusable Terraform child modules                    |
+
+Environment-specific root modules remain roadmap items and will be added when their corresponding infrastructure is implemented.
 
 ---
 
@@ -256,7 +238,9 @@ The backend provides:
 - Independent state files per lifecycle.
 - Native S3 state locking.
 - Bucket versioning for state recovery.
-- Server-side encryption.
+- Server-side encryption with a customer-managed KMS key and bucket keys.
+- HTTPS-only access enforced by bucket policy.
+- Rejection of explicit encryption headers that attempt to bypass the state KMS key.
 - Restricted cross-account access.
 
 State permissions are designed to be scoped to the corresponding environment and lifecycle.
@@ -309,11 +293,12 @@ Federated trust policies are designed to validate GitHub OIDC claims such as:
 | `sub`              | Restrict the authorized repository and execution context |
 | `repository_id`    | Bind access to an immutable repository identity          |
 | `ref`              | Restrict the Git reference                               |
-| `job_workflow_ref` | Restrict access to an approved workflow context          |
+| `repository_owner_id` | Bind access to an immutable repository owner identity |
+| `environment`      | Restrict access to an approved GitHub environment         |
 
 Claim conditions must be validated against actual GitHub-issued tokens and supported AWS IAM condition keys.
 
-The goal is to prevent a workflow authorized for one lifecycle from assuming roles associated with unrelated infrastructure.
+The current trust policy combines the immutable repository and owner IDs with the `main` ref and the `development` environment. GitHub environment protection rules must be configured before deployment workflows are enabled.
 
 ---
 
@@ -330,6 +315,8 @@ Responsible for provisioning and protecting the centralized Terraform backend.
 - Amazon S3 bucket.
 - Bucket versioning.
 - Server-side encryption.
+- Customer-managed KMS key with automatic rotation.
+- Bucket policy enforcing TLS and the expected KMS key.
 - Public access blocking.
 - Object ownership configuration.
 - Accidental deletion protection.
@@ -351,7 +338,7 @@ The identity bootstrap is separated from regular infrastructure deployments to a
 
 ## CI/CD Strategy
 
-Infrastructure deployments are intended to be performed through GitHub Actions.
+Terraform formatting and validation are performed through GitHub Actions. Automated plan and apply remain roadmap items.
 
 The pipeline architecture is designed around independent root modules and controlled execution permissions.
 
@@ -359,19 +346,18 @@ The pipeline architecture is designed around independent root modules and contro
 
 ```mermaid
 flowchart LR
-    A["Pull Request"] --> B["Detect Changes"]
-    B --> C["Terraform Validate"]
-    C --> D["Terraform Plan"]
-    D --> E["Policy Evaluation"]
-    E --> F["Approval"]
-    F --> G["Terraform Apply"]
+    A["Pull Request"] --> B["Terraform Format"]
+    B --> C["Terraform Init · backend disabled"]
+    C --> D["Terraform Validate"]
+    D -. "roadmap" .-> E["Terraform Plan"]
+    E -. "roadmap" .-> F["Approval and Apply"]
 ```
 
 ### Execution Principles
 
 **Change isolation**
 
-Only affected lifecycle stacks should be scheduled for execution, including any explicitly defined dependencies.
+Validation runs independently for each current root and child module. Deployment change detection will be introduced with environment root modules.
 
 **Credential isolation**
 
@@ -432,7 +418,7 @@ terraform fmt -recursive
 For a specific root module:
 
 ```bash
-cd terraform/environments/development/network
+cd terraform/bootstrap/identity/development
 
 terraform init -backend=false
 terraform validate
