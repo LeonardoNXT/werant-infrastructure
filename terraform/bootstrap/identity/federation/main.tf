@@ -11,7 +11,10 @@ module "aws_network_oidc_role_dev" {
   federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
   custom_conditions = {
     "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.github.owner_name, local.github.owner_id, local.github.repository_name, local.github.repository_id, local.development.environment_name)
-    "token.actions.githubusercontent.com:job_workflow_ref" : format("%s/%s/.github/workflows/%s/network.yml@refs/heads/main", local.github.owner_name, local.github.repository_name, local.development.workflow_path)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
   }
 }
 
@@ -38,7 +41,10 @@ module "aws_compute_oidc_role_dev" {
   federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
   custom_conditions = {
     "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.github.owner_name, local.github.owner_id, local.github.repository_name, local.github.repository_id, local.development.environment_name)
-    "token.actions.githubusercontent.com:job_workflow_ref" : format("%s/%s/.github/workflows/%s/compute.yml@refs/heads/main", local.github.owner_name, local.github.repository_name, local.development.workflow_path)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
   }
 }
 
@@ -65,7 +71,10 @@ module "aws_security_oidc_role_dev" {
   federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
   custom_conditions = {
     "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.github.owner_name, local.github.owner_id, local.github.repository_name, local.github.repository_id, local.development.environment_name)
-    "token.actions.githubusercontent.com:job_workflow_ref" : format("%s/%s/.github/workflows/%s/security.yml@refs/heads/main", local.github.owner_name, local.github.repository_name, local.development.workflow_path)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
   }
 }
 
@@ -92,7 +101,10 @@ module "aws_storage_oidc_role_dev" {
   federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
   custom_conditions = {
     "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.github.owner_name, local.github.owner_id, local.github.repository_name, local.github.repository_id, local.development.environment_name)
-    "token.actions.githubusercontent.com:job_workflow_ref" : format("%s/%s/.github/workflows/%s/storage.yml@refs/heads/main", local.github.owner_name, local.github.repository_name, local.development.workflow_path)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
   }
 }
 
@@ -119,7 +131,10 @@ module "aws_messaging_oidc_role_dev" {
   federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
   custom_conditions = {
     "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.github.owner_name, local.github.owner_id, local.github.repository_name, local.github.repository_id, local.development.environment_name)
-    "token.actions.githubusercontent.com:job_workflow_ref" : format("%s/%s/.github/workflows/%s/messaging.yml@refs/heads/main", local.github.owner_name, local.github.repository_name, local.development.workflow_path)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
   }
 }
 

@@ -13,6 +13,5 @@ locals {
 
   development = {
     environment_name = "development"
-    workflow_path    = "dev"
   }
 }

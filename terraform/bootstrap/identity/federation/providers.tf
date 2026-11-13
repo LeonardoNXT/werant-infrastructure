@@ -3,7 +3,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project   = "Federantion Werant"
+      Project   = "Identity Federantion Werant"
       ManagedBy = "Terraform"
     }
   }
