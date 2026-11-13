@@ -15,7 +15,8 @@ variable "cidr_block" {
 
 variable "map_public_ip_on_launch" {
   description = "Subnet instance map public ip on launch"
-  type        = string
+  type        = bool
+  default     = false
 }
 
 variable "tags" {
