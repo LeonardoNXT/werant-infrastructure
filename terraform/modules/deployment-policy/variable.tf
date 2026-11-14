@@ -22,6 +22,11 @@ variable "role_statements" {
     effect    = optional(string, "Allow")
     actions   = list(string)
     resources = list(string)
+    conditions = optional(list(object({
+      test     = string
+      variable = string
+      values   = list(string)
+    })), [])
   }))
 
   validation {
@@ -30,11 +35,18 @@ variable "role_statements" {
         length(trimspace(coalesce(statement.sid, ""))) > 0 &&
         contains(["Allow", "Deny"], statement.effect) &&
         length(statement.actions) > 0 &&
-        length(statement.resources) > 0
+        length(statement.resources) > 0 &&
+        alltrue([
+          for condition in statement.conditions : (
+            length(trimspace(condition.test)) > 0 &&
+            length(trimspace(condition.variable)) > 0 &&
+            length(condition.values) > 0
+          )
+        ])
       )
     ])
 
-    error_message = "Each IAM statement must have a non-empty SID, a valid effect (Allow or Deny), and non-empty actions and resources."
+    error_message = "Each IAM statement must have a non-empty SID, a valid effect (Allow or Deny), non-empty actions and resources, and complete conditions."
   }
 }
 
