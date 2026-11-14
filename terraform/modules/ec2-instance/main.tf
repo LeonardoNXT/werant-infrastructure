@@ -23,5 +23,6 @@ resource "aws_instance" "ec2_instance" {
     http_tokens   = "required"
   }
 
-  tags = var.tags
+  tags        = var.tags
+  volume_tags = var.tags
 }

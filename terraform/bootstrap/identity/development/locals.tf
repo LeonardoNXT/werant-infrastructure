@@ -89,6 +89,98 @@ locals {
           "*"
         ]
       }
+
+      run_amazon_ami = {
+        sid     = "RunInstancesWithAmazonOwnedAmi"
+        effect  = "Allow"
+        actions = ["ec2:RunInstances"]
+        resources = [
+          "arn:aws:ec2:sa-east-1::image/ami-*"
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Owner"
+            values   = ["amazon"]
+          }
+        ]
+      }
+
+      use_network_for_launch = {
+        sid     = "UseNetworkResourcesForInstanceLaunch"
+        effect  = "Allow"
+        actions = ["ec2:RunInstances"]
+        resources = [
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*",
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group/*",
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:network-interface/*"
+        ]
+      }
+
+      create_tagged_resources = {
+        sid     = "CreateTaggedComputeResources"
+        effect  = "Allow"
+        actions = ["ec2:RunInstances"]
+        resources = [
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:instance/*",
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:volume/*"
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Project"
+            values   = ["Werant"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Environment"
+            values   = ["Development"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Lifecycle"
+            values   = ["Compute"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/ManagedBy"
+            values   = ["Terraform"]
+          }
+        ]
+      }
+
+      tag_resources_during_launch = {
+        sid     = "TagComputeResourcesDuringLaunch"
+        effect  = "Allow"
+        actions = ["ec2:CreateTags"]
+        resources = [
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:instance/*",
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:volume/*"
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "ec2:CreateAction"
+            values   = ["RunInstances"]
+          }
+        ]
+      }
+
+      instance_lifecycle = {
+        sid    = "ManageEc2InstanceLifecycle"
+        effect = "Allow"
+        actions = [
+          "ec2:StartInstances",
+          "ec2:StopInstances",
+          "ec2:RebootInstances",
+          "ec2:TerminateInstances",
+          "ec2:ModifyInstanceAttribute",
+          "ec2:ModifyInstanceMetadataOptions"
+        ]
+        resources = [
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:instance/*"
+        ]
+      }
     }
   }
 
