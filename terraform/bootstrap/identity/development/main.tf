@@ -50,6 +50,26 @@ module "compute_deployment_role" {
   role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage compute infrastructure in the Werant Development environment."
 }
 
+module "compute_deployment_policy" {
+  source             = "../../../modules/deployment-policy"
+  policy_name        = "AllowComputePolicies"
+  policy_description = "IAM policy granting the permissions required to discover compute resources through Terraform in the Werant Development environment."
+  role_statements = {
+    for name, config in local.policies.compute :
+    name => {
+      sid       = config.sid
+      effect    = config.effect
+      actions   = config.actions
+      resources = config.resources
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "compute_deployment" {
+  policy_arn = module.compute_deployment_policy.aws_iam_policy_document_arn
+  role       = module.compute_deployment_role.aws_iam_role_name
+}
+
 module "compute_state_access_policy" {
   source = "../../../modules/terraform-apply-policy"
 

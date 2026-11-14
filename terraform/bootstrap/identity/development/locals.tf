@@ -75,6 +75,21 @@ locals {
         ]
       }
     }
+
+    compute = {
+      read = {
+        sid    = "ComputeReadDiscovery"
+        effect = "Allow"
+        actions = [
+          "ec2:Describe*",
+          "lambda:Get*",
+          "lambda:List*"
+        ]
+        resources = [
+          "*"
+        ]
+      }
+    }
   }
 
 
