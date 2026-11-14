@@ -40,3 +40,26 @@ resource "aws_iam_role_policy_attachment" "network_state_access" {
   policy_arn = module.network_state_access_policy.aws_iam_policy_arn
   role       = module.network_deployment_role.aws_iam_role_name
 }
+
+module "compute_deployment_role" {
+  source                = "../../../modules/deployment-roles"
+  root_account_id       = local.deployment_settings.compute.root_account_id
+  github_oidc_role_name = local.deployment_settings.compute.github_oidc_role_name
+  life_cycle_name       = local.deployment_settings.compute.life_cycle_name
+  sid                   = local.deployment_settings.compute.sid
+  role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage compute infrastructure in the Werant Development environment."
+}
+
+module "compute_state_access_policy" {
+  source = "../../../modules/terraform-apply-policy"
+
+  policy_name      = "compute-terraform-state-access-dev"
+  bucket_arn       = "arn:aws:s3:::werant-tfstate-${local.aws_accounts.management}"
+  target_state_key = "development/compute/terraform.tfstate"
+  kms_key_arn      = var.terraform_state_kms_key_arn
+}
+
+resource "aws_iam_role_policy_attachment" "compute_state_access" {
+  policy_arn = module.compute_state_access_policy.aws_iam_policy_arn
+  role       = module.compute_deployment_role.aws_iam_role_name
+}
