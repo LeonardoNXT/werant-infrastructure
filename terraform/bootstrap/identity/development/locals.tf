@@ -194,6 +194,88 @@ locals {
           "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:instance/*"
         ]
       }
+
+      create_tagged_lambda_functions = {
+        sid     = "CreateTaggedLambdaFunctions"
+        effect  = "Allow"
+        actions = ["lambda:CreateFunction"]
+        resources = [
+          "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Project"
+            values   = ["Werant"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Environment"
+            values   = ["Development"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Lifecycle"
+            values   = ["Compute"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/ManagedBy"
+            values   = ["Terraform"]
+          }
+        ]
+      }
+
+      lambda_function_lifecycle = {
+        sid    = "ManageLambdaFunctionLifecycle"
+        effect = "Allow"
+        actions = [
+          "lambda:DeleteFunction",
+          "lambda:UpdateFunctionCode",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:PublishVersion"
+        ]
+        resources = [
+          "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
+        ]
+      }
+
+      lambda_alias_lifecycle = {
+        sid    = "ManageLambdaAliases"
+        effect = "Allow"
+        actions = [
+          "lambda:CreateAlias",
+          "lambda:UpdateAlias",
+          "lambda:DeleteAlias"
+        ]
+        resources = [
+          "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
+        ]
+      }
+
+      lambda_reserved_concurrency = {
+        sid    = "ManageLambdaReservedConcurrency"
+        effect = "Allow"
+        actions = [
+          "lambda:PutFunctionConcurrency",
+          "lambda:DeleteFunctionConcurrency"
+        ]
+        resources = [
+          "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
+        ]
+      }
+
+      lambda_tags = {
+        sid    = "ManageLambdaFunctionTags"
+        effect = "Allow"
+        actions = [
+          "lambda:TagResource",
+          "lambda:UntagResource"
+        ]
+        resources = [
+          "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
+        ]
+      }
     }
   }
 
