@@ -166,6 +166,19 @@ locals {
         ]
       }
 
+      manage_resource_tags = {
+        sid    = "ManageEc2ResourceTags"
+        effect = "Allow"
+        actions = [
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+        resources = [
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:instance/*",
+          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:volume/*"
+        ]
+      }
+
       instance_lifecycle = {
         sid    = "ManageEc2InstanceLifecycle"
         effect = "Allow"

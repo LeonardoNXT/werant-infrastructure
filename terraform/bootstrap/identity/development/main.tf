@@ -53,7 +53,7 @@ module "compute_deployment_role" {
 module "compute_deployment_policy" {
   source             = "../../../modules/deployment-policy"
   policy_name        = "AllowComputePolicies"
-  policy_description = "IAM policy granting the permissions required to discover compute resources through Terraform in the Werant Development environment."
+  policy_description = "IAM policy granting the permissions required to discover and manage compute resources through Terraform in the Werant Development environment."
   role_statements = {
     for name, config in local.policies.compute :
     name => {
