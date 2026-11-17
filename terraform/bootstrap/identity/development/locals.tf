@@ -5,6 +5,13 @@ locals {
     development = "904054820030"
   }
 
+  runtime_resources = {
+    auth_key_rotation_lambda = {
+      function_name  = "werant-auth-key-rotation-dev"
+      log_group_name = "/aws/lambda/werant-auth-key-rotation-dev"
+    }
+  }
+
   templates = {
     github_oidc_role_name = "%s-github-oidc-role-dev"
   }
