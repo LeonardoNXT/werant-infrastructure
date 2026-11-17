@@ -17,3 +17,23 @@ output "auth_key_rotation_lambda_log_group_name" {
   description = "CloudWatch log group name for the Auth Key Rotation Lambda"
   value       = local.runtime_resources.auth_key_rotation_lambda.log_group_name
 }
+
+output "application_ec2_role_arn" {
+  description = "Runtime role ARN for the Werant application EC2 instance"
+  value       = module.application_ec2_role.aws_iam_role_arn
+}
+
+output "application_ec2_role_name" {
+  description = "Runtime role name for the Werant application EC2 instance"
+  value       = module.application_ec2_role.aws_iam_role_name
+}
+
+output "application_ec2_instance_profile_arn" {
+  description = "Instance profile ARN for the Werant application EC2 instance"
+  value       = aws_iam_instance_profile.application.arn
+}
+
+output "application_ec2_instance_profile_name" {
+  description = "Instance profile name for the Werant application EC2 instance"
+  value       = aws_iam_instance_profile.application.name
+}

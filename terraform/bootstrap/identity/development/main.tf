@@ -103,3 +103,22 @@ module "auth_key_rotation_lambda_role" {
     Workload    = "AuthKeyRotation"
   }
 }
+
+module "application_ec2_role" {
+  source = "../../../modules/service-roles"
+
+  role_name        = "werant-application-ec2-role-dev"
+  role_description = "Runtime identity for the Werant application services hosted on EC2 in the Development environment."
+  service_principals = [
+    "ec2.amazonaws.com"
+  ]
+  sid = "AllowEc2ServiceAssumption"
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "ApplicationRuntime"
+  }
+}

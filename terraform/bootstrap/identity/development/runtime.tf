@@ -17,3 +17,16 @@ resource "aws_iam_role_policy" "auth_key_rotation_lambda_runtime" {
   role   = module.auth_key_rotation_lambda_role.aws_iam_role_name
   policy = data.aws_iam_policy_document.auth_key_rotation_lambda_runtime.json
 }
+
+resource "aws_iam_instance_profile" "application" {
+  name = "werant-application-ec2-profile-dev"
+  role = module.application_ec2_role.aws_iam_role_name
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "ApplicationRuntime"
+  }
+}
