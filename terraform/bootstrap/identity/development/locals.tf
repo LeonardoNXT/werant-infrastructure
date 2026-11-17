@@ -299,6 +299,22 @@ locals {
           }
         ]
       }
+
+      pass_application_ec2_role = {
+        sid     = "PassApplicationEc2Role"
+        effect  = "Allow"
+        actions = ["iam:PassRole"]
+        resources = [
+          module.application_ec2_role.aws_iam_role_arn
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "iam:PassedToService"
+            values   = ["ec2.amazonaws.com"]
+          }
+        ]
+      }
     }
   }
 
