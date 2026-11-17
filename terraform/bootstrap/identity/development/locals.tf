@@ -276,6 +276,22 @@ locals {
           "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:*"
         ]
       }
+
+      pass_auth_key_rotation_lambda_role = {
+        sid     = "PassAuthKeyRotationLambdaRole"
+        effect  = "Allow"
+        actions = ["iam:PassRole"]
+        resources = [
+          module.auth_key_rotation_lambda_role.aws_iam_role_arn
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "iam:PassedToService"
+            values   = ["lambda.amazonaws.com"]
+          }
+        ]
+      }
     }
   }
 
