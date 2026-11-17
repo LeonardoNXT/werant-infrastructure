@@ -84,3 +84,22 @@ resource "aws_iam_role_policy_attachment" "compute_state_access" {
   policy_arn = module.compute_state_access_policy.aws_iam_policy_arn
   role       = module.compute_deployment_role.aws_iam_role_name
 }
+
+module "auth_key_rotation_lambda_role" {
+  source = "../../../modules/service-roles"
+
+  role_name        = "auth-key-rotation-lambda-role-dev"
+  role_description = "Runtime identity assumed by the Werant Auth Key Rotation Lambda in the Development environment."
+  service_principals = [
+    "lambda.amazonaws.com"
+  ]
+  sid = "AllowLambdaServiceAssumption"
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "AuthKeyRotation"
+  }
+}
