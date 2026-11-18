@@ -8,6 +8,16 @@ variable "instance_type" {
   }
 }
 
+variable "iam_instance_profile_name" {
+  description = "IAM instance profile name attached to the EC2 instance"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9+=,.@_-]{1,128}$", var.iam_instance_profile_name))
+    error_message = "iam_instance_profile_name must be a valid IAM instance profile name with at most 128 characters."
+  }
+}
+
 variable "subnet_id" {
   description = "Subnet where the EC2 instance is created"
   type        = string
