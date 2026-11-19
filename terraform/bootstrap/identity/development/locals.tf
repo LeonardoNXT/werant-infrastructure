@@ -12,6 +12,37 @@ locals {
     }
   }
 
+  security_resources = {
+    auth_envelope_kms = {
+      alias_name = "alias/werant-auth-envelope-encryption-dev"
+      alias_arn  = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:alias/werant-auth-envelope-encryption-dev"
+      key_arn    = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:key/*"
+      tags = {
+        Project     = "Werant"
+        Environment = "Development"
+        Lifecycle   = "Security"
+        ManagedBy   = "Terraform"
+        Workload    = "AuthEnvelopeEncryption"
+      }
+    }
+  }
+
+  auth_envelope_kms_request_tag_conditions = [
+    for key, value in local.security_resources.auth_envelope_kms.tags : {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/${key}"
+      values   = [value]
+    }
+  ]
+
+  auth_envelope_kms_resource_tag_conditions = [
+    for key, value in local.security_resources.auth_envelope_kms.tags : {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/${key}"
+      values   = [value]
+    } if contains(["Project", "Workload"], key)
+  ]
+
   templates = {
     github_oidc_role_name = "%s-github-oidc-role-dev"
   }
@@ -395,6 +426,213 @@ locals {
             values   = ["ec2.amazonaws.com"]
           }
         ]
+      }
+    }
+
+    security = {
+      discovery = {
+        sid    = "DiscoverKmsResources"
+        effect = "Allow"
+        actions = [
+          "kms:ListAliases",
+          "kms:ListKeys"
+        ]
+        resources = ["*"]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          }
+        ]
+      }
+
+      create_auth_envelope_key = {
+        sid       = "CreateAuthEnvelopeKey"
+        effect    = "Allow"
+        actions   = ["kms:CreateKey"]
+        resources = ["*"]
+        conditions = concat([
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeySpec"
+            values   = ["SYMMETRIC_DEFAULT"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeyUsage"
+            values   = ["ENCRYPT_DECRYPT"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeyOrigin"
+            values   = ["AWS_KMS"]
+          },
+          {
+            test     = "Bool"
+            variable = "kms:MultiRegion"
+            values   = ["false"]
+          },
+          {
+            test     = "BoolIfExists"
+            variable = "kms:BypassPolicyLockoutSafetyCheck"
+            values   = ["false"]
+          }
+        ], local.auth_envelope_kms_request_tag_conditions)
+      }
+
+      tag_auth_envelope_key_during_creation = {
+        sid     = "TagAuthEnvelopeKeyDuringCreation"
+        effect  = "Allow"
+        actions = ["kms:TagResource"]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = concat([
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeySpec"
+            values   = ["SYMMETRIC_DEFAULT"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeyUsage"
+            values   = ["ENCRYPT_DECRYPT"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:KeyOrigin"
+            values   = ["AWS_KMS"]
+          },
+          {
+            test     = "Bool"
+            variable = "kms:MultiRegion"
+            values   = ["false"]
+          }
+        ], local.auth_envelope_kms_request_tag_conditions)
+      }
+
+      manage_auth_envelope_key = {
+        sid    = "ManageAuthEnvelopeKey"
+        effect = "Allow"
+        actions = [
+          "kms:CancelKeyDeletion",
+          "kms:DescribeKey",
+          "kms:EnableKey",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags",
+          "kms:UpdateKeyDescription"
+        ]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = local.auth_envelope_kms_resource_tag_conditions
+      }
+
+      manage_auth_envelope_key_policy = {
+        sid     = "ManageAuthEnvelopeKeyPolicy"
+        effect  = "Allow"
+        actions = ["kms:PutKeyPolicy"]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = concat([
+          {
+            test     = "StringEquals"
+            variable = "kms:PolicyName"
+            values   = ["default"]
+          },
+          {
+            test     = "BoolIfExists"
+            variable = "kms:BypassPolicyLockoutSafetyCheck"
+            values   = ["false"]
+          }
+        ], local.auth_envelope_kms_resource_tag_conditions)
+      }
+
+      rotate_auth_envelope_key = {
+        sid     = "RotateAuthEnvelopeKeyEveryNinetyDays"
+        effect  = "Allow"
+        actions = ["kms:EnableKeyRotation"]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = concat([
+          {
+            test     = "NumericEquals"
+            variable = "kms:RotationPeriodInDays"
+            values   = ["90"]
+          }
+        ], local.auth_envelope_kms_resource_tag_conditions)
+      }
+
+      schedule_auth_envelope_key_deletion = {
+        sid     = "ScheduleAuthEnvelopeKeyDeletion"
+        effect  = "Allow"
+        actions = ["kms:ScheduleKeyDeletion"]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = concat([
+          {
+            test     = "NumericEquals"
+            variable = "kms:ScheduleKeyDeletionPendingWindowInDays"
+            values   = ["30"]
+          }
+        ], local.auth_envelope_kms_resource_tag_conditions)
+      }
+
+      manage_auth_envelope_key_tags = {
+        sid     = "ManageAuthEnvelopeKeyTags"
+        effect  = "Allow"
+        actions = ["kms:TagResource"]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = concat(local.auth_envelope_kms_resource_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = keys(local.security_resources.auth_envelope_kms.tags)
+          }
+        ])
+      }
+
+      manage_auth_envelope_alias = {
+        sid    = "ManageAuthEnvelopeAlias"
+        effect = "Allow"
+        actions = [
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:UpdateAlias"
+        ]
+        resources = [
+          local.security_resources.auth_envelope_kms.alias_arn
+        ]
+      }
+
+      associate_auth_envelope_alias = {
+        sid    = "AssociateAuthEnvelopeAlias"
+        effect = "Allow"
+        actions = [
+          "kms:CreateAlias",
+          "kms:UpdateAlias"
+        ]
+        resources = [
+          local.security_resources.auth_envelope_kms.key_arn
+        ]
+        conditions = local.auth_envelope_kms_resource_tag_conditions
       }
     }
   }

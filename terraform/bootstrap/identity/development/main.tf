@@ -94,6 +94,27 @@ module "security_deployment_role" {
   role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage security infrastructure in the Werant Development environment."
 }
 
+module "security_deployment_policy" {
+  source             = "../../../modules/deployment-policy"
+  policy_name        = "AllowSecurityPolicies"
+  policy_description = "IAM policy granting the permissions required to provision and manage KMS resources through Terraform in the Werant Development environment."
+  role_statements = {
+    for name, config in local.policies.security :
+    name => {
+      sid        = config.sid
+      effect     = config.effect
+      actions    = config.actions
+      resources  = config.resources
+      conditions = try(config.conditions, [])
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "security_deployment" {
+  policy_arn = module.security_deployment_policy.aws_iam_policy_document_arn
+  role       = module.security_deployment_role.aws_iam_role_name
+}
+
 module "security_state_access_policy" {
   source = "../../../modules/terraform-apply-policy"
 
