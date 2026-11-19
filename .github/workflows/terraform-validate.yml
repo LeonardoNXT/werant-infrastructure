@@ -56,6 +56,7 @@ jobs:
           - terraform/modules/github-oidc-policy
           - terraform/modules/github-oidc-provider
           - terraform/modules/github-roles
+          - terraform/modules/kms-key
           - terraform/modules/lambda-function
           - terraform/modules/service-roles
           - terraform/modules/subnet-instance
