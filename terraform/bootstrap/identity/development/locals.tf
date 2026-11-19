@@ -284,6 +284,87 @@ locals {
         ]
       }
 
+      cloudwatch_logs_read = {
+        sid       = "DiscoverCloudWatchLogGroups"
+        effect    = "Allow"
+        actions   = ["logs:DescribeLogGroups"]
+        resources = ["*"]
+      }
+
+      create_auth_key_rotation_log_group = {
+        sid     = "CreateAuthKeyRotationLogGroup"
+        effect  = "Allow"
+        actions = ["logs:CreateLogGroup"]
+        resources = [
+          "arn:aws:logs:sa-east-1:${local.aws_accounts.development}:log-group:${local.runtime_resources.auth_key_rotation_lambda.log_group_name}"
+        ]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Project"
+            values   = ["Werant"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Environment"
+            values   = ["Development"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Lifecycle"
+            values   = ["Compute"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/ManagedBy"
+            values   = ["Terraform"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestTag/Workload"
+            values   = ["AuthKeyRotation"]
+          }
+        ]
+      }
+
+      auth_key_rotation_log_group_lifecycle = {
+        sid    = "ManageAuthKeyRotationLogGroup"
+        effect = "Allow"
+        actions = [
+          "logs:DeleteLogGroup",
+          "logs:ListTagsForResource",
+          "logs:PutRetentionPolicy"
+        ]
+        resources = [
+          "arn:aws:logs:sa-east-1:${local.aws_accounts.development}:log-group:${local.runtime_resources.auth_key_rotation_lambda.log_group_name}"
+        ]
+      }
+
+      auth_key_rotation_log_group_tags = {
+        sid    = "ManageAuthKeyRotationLogGroupTags"
+        effect = "Allow"
+        actions = [
+          "logs:TagResource",
+          "logs:UntagResource"
+        ]
+        resources = [
+          "arn:aws:logs:sa-east-1:${local.aws_accounts.development}:log-group:${local.runtime_resources.auth_key_rotation_lambda.log_group_name}"
+        ]
+        conditions = [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values = [
+              "Project",
+              "Environment",
+              "Lifecycle",
+              "ManagedBy",
+              "Workload"
+            ]
+          }
+        ]
+      }
+
       pass_auth_key_rotation_lambda_role = {
         sid     = "PassAuthKeyRotationLambdaRole"
         effect  = "Allow"
