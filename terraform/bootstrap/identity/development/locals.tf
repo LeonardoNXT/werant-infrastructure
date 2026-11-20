@@ -12,20 +12,37 @@ locals {
     }
   }
 
+  security_kms_common_tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Security"
+    ManagedBy   = "Terraform"
+  }
+
+  security_kms_workloads = [
+    "ApplicationStorage",
+    "AuthEnvelopeEncryption"
+  ]
+
   security_resources = {
     auth_envelope_kms = {
       alias_name = "alias/werant-auth-envelope-encryption-dev"
       alias_arn  = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:alias/werant-auth-envelope-encryption-dev"
-      key_arn    = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:key/*"
-      tags = {
-        Project     = "Werant"
-        Environment = "Development"
-        Lifecycle   = "Security"
-        ManagedBy   = "Terraform"
-        Workload    = "AuthEnvelopeEncryption"
-      }
+      tags = merge(local.security_kms_common_tags, {
+        Workload = "AuthEnvelopeEncryption"
+      })
+    }
+
+    application_storage_kms = {
+      alias_name = "alias/werant-storage-dev"
+      alias_arn  = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:alias/werant-storage-dev"
+      tags = merge(local.security_kms_common_tags, {
+        Workload = "ApplicationStorage"
+      })
     }
   }
+
+  security_kms_key_arn = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:key/*"
 
   storage_resources = {
     application_buckets = {
@@ -41,20 +58,31 @@ locals {
     }
   ]
 
-  auth_envelope_kms_request_tag_conditions = [
-    for key, value in local.security_resources.auth_envelope_kms.tags : {
+  security_kms_request_tag_conditions = concat([
+    for key, value in local.security_kms_common_tags : {
       test     = "StringEquals"
       variable = "aws:RequestTag/${key}"
       values   = [value]
     }
-  ]
-
-  auth_envelope_kms_resource_tag_conditions = [
-    for key, value in local.security_resources.auth_envelope_kms.tags : {
+    ], [
+    {
       test     = "StringEquals"
-      variable = "aws:ResourceTag/${key}"
-      values   = [value]
-    } if contains(["Project", "Workload"], key)
+      variable = "aws:RequestTag/Workload"
+      values   = local.security_kms_workloads
+    }
+  ])
+
+  security_kms_resource_tag_conditions = [
+    {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [local.security_kms_common_tags.Project]
+    },
+    {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Workload"
+      values   = local.security_kms_workloads
+    }
   ]
 
   templates = {
@@ -461,8 +489,8 @@ locals {
         ]
       }
 
-      create_auth_envelope_key = {
-        sid       = "CreateAuthEnvelopeKey"
+      create_werant_encryption_key = {
+        sid       = "CreateWerantEncryptionKey"
         effect    = "Allow"
         actions   = ["kms:CreateKey"]
         resources = ["*"]
@@ -497,15 +525,15 @@ locals {
             variable = "kms:BypassPolicyLockoutSafetyCheck"
             values   = ["false"]
           }
-        ], local.auth_envelope_kms_request_tag_conditions)
+        ], local.security_kms_request_tag_conditions)
       }
 
-      tag_auth_envelope_key_during_creation = {
-        sid     = "TagAuthEnvelopeKeyDuringCreation"
+      tag_werant_encryption_key_during_creation = {
+        sid     = "TagWerantEncryptionKeyDuringCreation"
         effect  = "Allow"
         actions = ["kms:TagResource"]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
         conditions = concat([
           {
@@ -533,11 +561,11 @@ locals {
             variable = "kms:MultiRegion"
             values   = ["false"]
           }
-        ], local.auth_envelope_kms_request_tag_conditions)
+        ], local.security_kms_request_tag_conditions)
       }
 
-      manage_auth_envelope_key = {
-        sid    = "ManageAuthEnvelopeKey"
+      manage_werant_encryption_keys = {
+        sid    = "ManageWerantEncryptionKeys"
         effect = "Allow"
         actions = [
           "kms:CancelKeyDeletion",
@@ -549,17 +577,17 @@ locals {
           "kms:UpdateKeyDescription"
         ]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
-        conditions = local.auth_envelope_kms_resource_tag_conditions
+        conditions = local.security_kms_resource_tag_conditions
       }
 
-      manage_auth_envelope_key_policy = {
-        sid     = "ManageAuthEnvelopeKeyPolicy"
+      manage_werant_encryption_key_policies = {
+        sid     = "ManageWerantEncryptionKeyPolicies"
         effect  = "Allow"
         actions = ["kms:PutKeyPolicy"]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
         conditions = concat([
           {
@@ -572,15 +600,15 @@ locals {
             variable = "kms:BypassPolicyLockoutSafetyCheck"
             values   = ["false"]
           }
-        ], local.auth_envelope_kms_resource_tag_conditions)
+        ], local.security_kms_resource_tag_conditions)
       }
 
-      rotate_auth_envelope_key = {
-        sid     = "RotateAuthEnvelopeKeyEveryNinetyDays"
+      rotate_werant_encryption_keys = {
+        sid     = "RotateWerantEncryptionKeysEveryNinetyDays"
         effect  = "Allow"
         actions = ["kms:EnableKeyRotation"]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
         conditions = concat([
           {
@@ -588,15 +616,15 @@ locals {
             variable = "kms:RotationPeriodInDays"
             values   = ["90"]
           }
-        ], local.auth_envelope_kms_resource_tag_conditions)
+        ], local.security_kms_resource_tag_conditions)
       }
 
-      schedule_auth_envelope_key_deletion = {
-        sid     = "ScheduleAuthEnvelopeKeyDeletion"
+      schedule_werant_encryption_key_deletion = {
+        sid     = "ScheduleWerantEncryptionKeyDeletion"
         effect  = "Allow"
         actions = ["kms:ScheduleKeyDeletion"]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
         conditions = concat([
           {
@@ -604,27 +632,27 @@ locals {
             variable = "kms:ScheduleKeyDeletionPendingWindowInDays"
             values   = ["30"]
           }
-        ], local.auth_envelope_kms_resource_tag_conditions)
+        ], local.security_kms_resource_tag_conditions)
       }
 
-      manage_auth_envelope_key_tags = {
-        sid     = "ManageAuthEnvelopeKeyTags"
+      manage_werant_encryption_key_tags = {
+        sid     = "ManageWerantEncryptionKeyTags"
         effect  = "Allow"
         actions = ["kms:TagResource"]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
-        conditions = concat(local.auth_envelope_kms_resource_tag_conditions, [
+        conditions = concat(local.security_kms_resource_tag_conditions, [
           {
             test     = "ForAllValues:StringEquals"
             variable = "aws:TagKeys"
-            values   = keys(local.security_resources.auth_envelope_kms.tags)
+            values   = concat(keys(local.security_kms_common_tags), ["Workload"])
           }
         ])
       }
 
-      manage_auth_envelope_alias = {
-        sid    = "ManageAuthEnvelopeAlias"
+      manage_werant_encryption_aliases = {
+        sid    = "ManageWerantEncryptionAliases"
         effect = "Allow"
         actions = [
           "kms:CreateAlias",
@@ -632,21 +660,22 @@ locals {
           "kms:UpdateAlias"
         ]
         resources = [
-          local.security_resources.auth_envelope_kms.alias_arn
+          local.security_resources.auth_envelope_kms.alias_arn,
+          local.security_resources.application_storage_kms.alias_arn
         ]
       }
 
-      associate_auth_envelope_alias = {
-        sid    = "AssociateAuthEnvelopeAlias"
+      associate_werant_encryption_aliases = {
+        sid    = "AssociateWerantEncryptionAliases"
         effect = "Allow"
         actions = [
           "kms:CreateAlias",
           "kms:UpdateAlias"
         ]
         resources = [
-          local.security_resources.auth_envelope_kms.key_arn
+          local.security_kms_key_arn
         ]
-        conditions = local.auth_envelope_kms_resource_tag_conditions
+        conditions = local.security_kms_resource_tag_conditions
       }
     }
 
