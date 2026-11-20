@@ -50,6 +50,7 @@ jobs:
           - terraform/bootstrap/state
           - terraform/bootstrap/identity/federation
           - terraform/bootstrap/identity/development
+          - terraform/environments/development/network
           - terraform/environments/development/security
           - terraform/environments/development/storage
           - terraform/modules/deployment-policy
