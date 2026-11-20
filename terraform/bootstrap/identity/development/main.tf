@@ -129,6 +129,29 @@ resource "aws_iam_role_policy_attachment" "security_state_access" {
   role       = module.security_deployment_role.aws_iam_role_name
 }
 
+module "storage_deployment_role" {
+  source                = "../../../modules/deployment-roles"
+  root_account_id       = local.deployment_settings.storage.root_account_id
+  github_oidc_role_name = local.deployment_settings.storage.github_oidc_role_name
+  life_cycle_name       = local.deployment_settings.storage.life_cycle_name
+  sid                   = local.deployment_settings.storage.sid
+  role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage storage infrastructure in the Werant Development environment."
+}
+
+module "storage_state_access_policy" {
+  source = "../../../modules/terraform-apply-policy"
+
+  policy_name      = "storage-terraform-state-access-dev"
+  bucket_arn       = "arn:aws:s3:::werant-tfstate-${local.aws_accounts.management}"
+  target_state_key = "development/storage/terraform.tfstate"
+  kms_key_arn      = var.terraform_state_kms_key_arn
+}
+
+resource "aws_iam_role_policy_attachment" "storage_state_access" {
+  policy_arn = module.storage_state_access_policy.aws_iam_policy_arn
+  role       = module.storage_deployment_role.aws_iam_role_name
+}
+
 module "auth_key_rotation_lambda_role" {
   source = "../../../modules/service-roles"
 
