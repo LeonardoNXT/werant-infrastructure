@@ -68,8 +68,10 @@ locals {
   ]
 
   network_resource_arns = {
-    subnet = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
-    vpc    = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
+    internet_gateway = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:internet-gateway/*"
+    route_table      = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:route-table/*"
+    subnet           = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
+    vpc              = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
   }
 
   storage_resources = {
@@ -141,6 +143,8 @@ locals {
         effect = "Allow"
         actions = [
           "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeRouteTables",
           "ec2:DescribeSubnets",
           "ec2:DescribeVpcAttribute",
           "ec2:DescribeVpcs"
@@ -201,6 +205,52 @@ locals {
         conditions = local.network_resource_tag_conditions
       }
 
+      create_tagged_internet_gateway = {
+        sid       = "CreateTaggedInternetGateway"
+        effect    = "Allow"
+        actions   = ["ec2:CreateInternetGateway"]
+        resources = [local.network_resource_arns.internet_gateway]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      create_tagged_route_table = {
+        sid       = "CreateTaggedRouteTable"
+        effect    = "Allow"
+        actions   = ["ec2:CreateRouteTable"]
+        resources = [local.network_resource_arns.route_table]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      use_network_vpc_for_route_table = {
+        sid        = "UseNetworkVpcForRouteTable"
+        effect     = "Allow"
+        actions    = ["ec2:CreateRouteTable"]
+        resources  = [local.network_resource_arns.vpc]
+        conditions = local.network_resource_tag_conditions
+      }
+
       tag_network_resources_during_creation = {
         sid       = "TagNetworkResourcesDuringCreation"
         effect    = "Allow"
@@ -210,7 +260,7 @@ locals {
           {
             test     = "StringEquals"
             variable = "ec2:CreateAction"
-            values   = ["CreateSubnet", "CreateVpc"]
+            values   = ["CreateInternetGateway", "CreateRouteTable", "CreateSubnet", "CreateVpc"]
           },
           {
             test     = "ForAllValues:StringEquals"
@@ -229,7 +279,65 @@ locals {
           "ec2:ModifySubnetAttribute",
           "ec2:ModifyVpcAttribute"
         ]
-        resources  = values(local.network_resource_arns)
+        resources = [
+          local.network_resource_arns.subnet,
+          local.network_resource_arns.vpc
+        ]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      attach_network_internet_gateway = {
+        sid    = "AttachNetworkInternetGateway"
+        effect = "Allow"
+        actions = [
+          "ec2:AttachInternetGateway",
+          "ec2:DetachInternetGateway"
+        ]
+        resources = [
+          local.network_resource_arns.internet_gateway,
+          local.network_resource_arns.vpc
+        ]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      manage_network_routing_resources = {
+        sid    = "ManageNetworkRoutingResources"
+        effect = "Allow"
+        actions = [
+          "ec2:DeleteInternetGateway",
+          "ec2:DeleteRouteTable"
+        ]
+        resources = [
+          local.network_resource_arns.internet_gateway,
+          local.network_resource_arns.route_table
+        ]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      manage_network_routes = {
+        sid    = "ManageNetworkRoutes"
+        effect = "Allow"
+        actions = [
+          "ec2:CreateRoute",
+          "ec2:DeleteRoute",
+          "ec2:ReplaceRoute"
+        ]
+        resources  = [local.network_resource_arns.route_table]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      associate_network_route_table = {
+        sid    = "AssociateNetworkRouteTable"
+        effect = "Allow"
+        actions = [
+          "ec2:AssociateRouteTable",
+          "ec2:DisassociateRouteTable",
+          "ec2:ReplaceRouteTableAssociation"
+        ]
+        resources = [
+          local.network_resource_arns.route_table,
+          local.network_resource_arns.subnet
+        ]
         conditions = local.network_resource_tag_conditions
       }
 
