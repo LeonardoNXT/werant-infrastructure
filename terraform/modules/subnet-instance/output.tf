@@ -1,7 +1,9 @@
 output "aws_subnet_arn" {
-  value = aws_subnet.instance.arn
+  description = "ARN of the managed subnet"
+  value       = aws_subnet.instance.arn
 }
 
 output "aws_subnet_id" {
-  value = aws_subnet.instance.id
+  description = "ID of the managed subnet"
+  value       = aws_subnet.instance.id
 }
