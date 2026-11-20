@@ -48,6 +48,11 @@ locals {
     application_buckets = {
       arn = "arn:aws:s3:::werant-dev-*"
     }
+
+    application_storage_kms = {
+      alias_name = local.security_resources.application_storage_kms.alias_name
+      key_arn    = local.security_kms_key_arn
+    }
   }
 
   storage_bucket_conditions = [
@@ -685,6 +690,54 @@ locals {
         effect    = "Allow"
         actions   = ["s3:ListAllMyBuckets"]
         resources = ["*"]
+      }
+
+      discover_application_storage_kms_alias = {
+        sid       = "DiscoverApplicationStorageKmsAlias"
+        effect    = "Allow"
+        actions   = ["kms:ListAliases"]
+        resources = ["*"]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "kms:CallerAccount"
+            values   = [local.aws_accounts.development]
+          }
+        ]
+      }
+
+      describe_application_storage_kms_key = {
+        sid       = "DescribeApplicationStorageKmsKey"
+        effect    = "Allow"
+        actions   = ["kms:DescribeKey"]
+        resources = [local.storage_resources.application_storage_kms.key_arn]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:ResourceTag/Project"
+            values   = [local.security_kms_common_tags.Project]
+          },
+          {
+            test     = "StringEquals"
+            variable = "aws:ResourceTag/Workload"
+            values   = [local.security_resources.application_storage_kms.tags.Workload]
+          },
+          {
+            test     = "ForAnyValue:StringEquals"
+            variable = "kms:ResourceAliases"
+            values   = [local.storage_resources.application_storage_kms.alias_name]
+          }
+        ]
       }
 
       create_buckets = {
