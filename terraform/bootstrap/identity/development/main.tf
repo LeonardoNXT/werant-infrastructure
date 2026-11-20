@@ -14,10 +14,11 @@ module "network_deployment_policy" {
   role_statements = {
     for name, config in local.policies.network :
     name => {
-      sid       = config.sid
-      effect    = config.effect
-      actions   = config.actions
-      resources = config.resources
+      sid        = config.sid
+      effect     = config.effect
+      actions    = config.actions
+      resources  = config.resources
+      conditions = try(config.conditions, [])
     }
   }
 }

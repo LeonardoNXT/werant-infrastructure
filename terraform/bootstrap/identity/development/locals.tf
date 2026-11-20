@@ -44,6 +44,34 @@ locals {
 
   security_kms_key_arn = "arn:aws:kms:sa-east-1:${local.aws_accounts.development}:key/*"
 
+  network_common_tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Network"
+    ManagedBy   = "Terraform"
+  }
+
+  network_request_tag_conditions = [
+    for key, value in local.network_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/${key}"
+      values   = [value]
+    }
+  ]
+
+  network_resource_tag_conditions = [
+    for key, value in local.network_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/${key}"
+      values   = [value]
+    }
+  ]
+
+  network_resource_arns = {
+    subnet = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
+    vpc    = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
+  }
+
   storage_resources = {
     application_buckets = {
       arn = "arn:aws:s3:::werant-dev-*"
@@ -109,55 +137,117 @@ locals {
   policies = {
     network = {
       read = {
-        sid    = "NetworkReadAccess"
+        sid    = "DiscoverNetworkResources"
         effect = "Allow"
         actions = [
-          "ec2:DescribeVpcs",
+          "ec2:DescribeAvailabilityZones",
           "ec2:DescribeSubnets",
+          "ec2:DescribeVpcAttribute",
+          "ec2:DescribeVpcs"
         ]
-        resources = [
-          "*"
+        resources = ["*"]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "aws:RequestedRegion"
+            values   = ["sa-east-1"]
+          }
         ]
       }
 
-      vpc = {
-        sid    = "VpcManagement"
+      create_tagged_vpc = {
+        sid       = "CreateTaggedVpc"
+        effect    = "Allow"
+        actions   = ["ec2:CreateVpc"]
+        resources = [local.network_resource_arns.vpc]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      create_tagged_subnet = {
+        sid       = "CreateTaggedSubnet"
+        effect    = "Allow"
+        actions   = ["ec2:CreateSubnet"]
+        resources = [local.network_resource_arns.subnet]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      use_network_vpc_for_subnet = {
+        sid        = "UseNetworkVpcForSubnet"
+        effect     = "Allow"
+        actions    = ["ec2:CreateSubnet"]
+        resources  = [local.network_resource_arns.vpc]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      tag_network_resources_during_creation = {
+        sid       = "TagNetworkResourcesDuringCreation"
+        effect    = "Allow"
+        actions   = ["ec2:CreateTags"]
+        resources = values(local.network_resource_arns)
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:CreateAction"
+            values   = ["CreateSubnet", "CreateVpc"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      manage_network_resource_lifecycle = {
+        sid    = "ManageNetworkResourceLifecycle"
         effect = "Allow"
         actions = [
-          "ec2:CreateVpc",
+          "ec2:DeleteSubnet",
           "ec2:DeleteVpc",
+          "ec2:ModifySubnetAttribute",
           "ec2:ModifyVpcAttribute"
         ]
-        resources = [
-          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
-        ]
+        resources  = values(local.network_resource_arns)
+        conditions = local.network_resource_tag_conditions
       }
-      subnet = {
-        sid    = "SubnetManagement"
-        effect = "Allow"
-        actions = [
-          "ec2:CreateSubnet",
-          "ec2:DeleteSubnet",
-          "ec2:ModifySubnetAttribute"
-        ]
-        resources = [
-          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*",
-          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
-        ]
-      }
-      tagging = {
-        sid    = "NetworkTagManagement"
-        effect = "Allow"
 
+      manage_network_resource_tags = {
+        sid    = "ManageNetworkResourceTags"
+        effect = "Allow"
         actions = [
           "ec2:CreateTags",
           "ec2:DeleteTags"
         ]
-
-        resources = [
-          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*",
-          "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
-        ]
+        resources = values(local.network_resource_arns)
+        conditions = concat(local.network_resource_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = ["Name", "Tier", "Workload"]
+          }
+        ])
       }
     }
 
