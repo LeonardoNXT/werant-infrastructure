@@ -138,6 +138,27 @@ module "storage_deployment_role" {
   role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage storage infrastructure in the Werant Development environment."
 }
 
+module "storage_deployment_policy" {
+  source             = "../../../modules/deployment-policy"
+  policy_name        = "AllowStoragePolicies"
+  policy_description = "IAM policy granting the permissions required to provision and manage S3 buckets through Terraform in the Werant Development environment."
+  role_statements = {
+    for name, config in local.policies.storage :
+    name => {
+      sid        = config.sid
+      effect     = config.effect
+      actions    = config.actions
+      resources  = config.resources
+      conditions = try(config.conditions, [])
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "storage_deployment" {
+  policy_arn = module.storage_deployment_policy.aws_iam_policy_document_arn
+  role       = module.storage_deployment_role.aws_iam_role_name
+}
+
 module "storage_state_access_policy" {
   source = "../../../modules/terraform-apply-policy"
 

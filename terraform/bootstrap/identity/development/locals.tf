@@ -27,6 +27,20 @@ locals {
     }
   }
 
+  storage_resources = {
+    application_buckets = {
+      arn = "arn:aws:s3:::werant-dev-*"
+    }
+  }
+
+  storage_bucket_conditions = [
+    {
+      test     = "StringEquals"
+      variable = "s3:ResourceAccount"
+      values   = [local.aws_accounts.development]
+    }
+  ]
+
   auth_envelope_kms_request_tag_conditions = [
     for key, value in local.security_resources.auth_envelope_kms.tags : {
       test     = "StringEquals"
@@ -633,6 +647,67 @@ locals {
           local.security_resources.auth_envelope_kms.key_arn
         ]
         conditions = local.auth_envelope_kms_resource_tag_conditions
+      }
+    }
+
+    storage = {
+      discovery = {
+        sid       = "DiscoverS3Buckets"
+        effect    = "Allow"
+        actions   = ["s3:ListAllMyBuckets"]
+        resources = ["*"]
+      }
+
+      create_buckets = {
+        sid       = "CreateDevelopmentBuckets"
+        effect    = "Allow"
+        actions   = ["s3:CreateBucket"]
+        resources = [local.storage_resources.application_buckets.arn]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "s3:locationconstraint"
+            values   = ["sa-east-1"]
+          }
+        ]
+      }
+
+      read_bucket_configuration = {
+        sid    = "ReadDevelopmentBucketConfiguration"
+        effect = "Allow"
+        actions = [
+          "s3:GetBucketAcl",
+          "s3:GetBucketLocation",
+          "s3:GetBucketOwnershipControls",
+          "s3:GetBucketPolicy",
+          "s3:GetBucketPolicyStatus",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:GetBucketTagging",
+          "s3:GetBucketVersioning",
+          "s3:GetEncryptionConfiguration",
+          "s3:GetLifecycleConfiguration",
+          "s3:ListBucket"
+        ]
+        resources  = [local.storage_resources.application_buckets.arn]
+        conditions = local.storage_bucket_conditions
+      }
+
+      manage_bucket_configuration = {
+        sid    = "ManageDevelopmentBucketConfiguration"
+        effect = "Allow"
+        actions = [
+          "s3:DeleteBucket",
+          "s3:DeleteBucketPolicy",
+          "s3:PutBucketOwnershipControls",
+          "s3:PutBucketPolicy",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:PutBucketTagging",
+          "s3:PutBucketVersioning",
+          "s3:PutEncryptionConfiguration",
+          "s3:PutLifecycleConfiguration"
+        ]
+        resources  = [local.storage_resources.application_buckets.arn]
+        conditions = local.storage_bucket_conditions
       }
     }
   }
