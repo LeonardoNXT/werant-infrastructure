@@ -58,6 +58,7 @@ jobs:
           - terraform/modules/github-roles
           - terraform/modules/kms-key
           - terraform/modules/lambda-function
+          - terraform/modules/s3-bucket
           - terraform/modules/service-roles
           - terraform/modules/subnet-instance
           - terraform/modules/terraform-apply-policy
