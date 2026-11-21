@@ -18,6 +18,21 @@ output "auth_key_rotation_lambda_log_group_name" {
   value       = local.runtime_resources.auth_key_rotation_lambda.log_group_name
 }
 
+output "auth_key_rotation_scheduler_role_arn" {
+  description = "Runtime role ARN assumed by EventBridge Scheduler to invoke the Auth Key Rotation Lambda"
+  value       = module.auth_key_rotation_scheduler_role.aws_iam_role_arn
+}
+
+output "auth_key_rotation_scheduler_role_name" {
+  description = "Runtime role name assumed by EventBridge Scheduler to invoke the Auth Key Rotation Lambda"
+  value       = module.auth_key_rotation_scheduler_role.aws_iam_role_name
+}
+
+output "auth_key_rotation_schedule_group_name" {
+  description = "Canonical EventBridge Scheduler group authorized to invoke the Auth Key Rotation Lambda"
+  value       = local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name
+}
+
 output "application_ec2_role_arn" {
   description = "Runtime role ARN for the Werant application EC2 instance"
   value       = module.application_ec2_role.aws_iam_role_arn

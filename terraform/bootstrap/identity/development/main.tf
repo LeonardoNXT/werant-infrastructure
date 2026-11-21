@@ -288,3 +288,36 @@ module "ec2_scheduler_role" {
     Workload    = "Ec2OperationsScheduler"
   }
 }
+
+module "auth_key_rotation_scheduler_role" {
+  source = "../../../modules/service-roles"
+
+  role_name        = local.runtime_resources.auth_key_rotation_scheduler.role_name
+  role_description = "Runtime identity assumed by EventBridge Scheduler to invoke the Werant Auth Key Rotation Lambda."
+  service_principals = [
+    "scheduler.amazonaws.com"
+  ]
+  sid = "AllowAuthKeyRotationSchedulerAssumption"
+  trust_conditions = [
+    {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [local.aws_accounts.development]
+    },
+    {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values = [
+        "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule-group/${local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name}"
+      ]
+    }
+  ]
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "AuthKeyRotationScheduler"
+  }
+}

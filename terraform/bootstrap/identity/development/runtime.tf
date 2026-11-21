@@ -18,6 +18,23 @@ resource "aws_iam_role_policy" "auth_key_rotation_lambda_runtime" {
   policy = data.aws_iam_policy_document.auth_key_rotation_lambda_runtime.json
 }
 
+data "aws_iam_policy_document" "auth_key_rotation_scheduler_runtime" {
+  statement {
+    sid     = "InvokeAuthKeyRotationLambdaAlias"
+    effect  = "Allow"
+    actions = ["lambda:InvokeFunction"]
+    resources = [
+      "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}:${local.runtime_resources.auth_key_rotation_lambda.alias_name}"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "auth_key_rotation_scheduler_runtime" {
+  name   = "werant-auth-key-rotation-scheduler-runtime-dev"
+  role   = module.auth_key_rotation_scheduler_role.aws_iam_role_name
+  policy = data.aws_iam_policy_document.auth_key_rotation_scheduler_runtime.json
+}
+
 data "aws_iam_policy_document" "ec2_scheduler_runtime" {
   statement {
     sid    = "ManageWerantDevelopmentApplicationNodePower"

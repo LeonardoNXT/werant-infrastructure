@@ -9,6 +9,12 @@ locals {
     auth_key_rotation_lambda = {
       function_name  = "werant-auth-key-rotation-dev"
       log_group_name = "/aws/lambda/werant-auth-key-rotation-dev"
+      alias_name     = "live"
+    }
+
+    auth_key_rotation_scheduler = {
+      role_name           = "werant-auth-key-rotation-scheduler-role-dev"
+      schedule_group_name = "werant-auth-key-rotation-dev"
     }
 
     ec2_scheduler = {
