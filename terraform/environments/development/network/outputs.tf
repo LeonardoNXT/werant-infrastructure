@@ -27,3 +27,13 @@ output "public_routing" {
     route_table_id             = module.public_routing.route_table_id
   }
 }
+
+output "application_security_group_id" {
+  description = "ID of the Security Group attached to the Development application node"
+  value       = module.application_security_group.id
+}
+
+output "application_security_group_arn" {
+  description = "ARN of the Security Group attached to the Development application node"
+  value       = module.application_security_group.arn
+}

@@ -38,3 +38,44 @@ module "public_routing" {
     Workload = "PublicRouting"
   })
 }
+
+module "application_security_group" {
+  source = "../../../modules/security-group"
+
+  name        = "werant-dev-application"
+  description = "Public ingress for the Werant Development application node"
+  vpc_id      = module.vpc.aws_vpc_id
+
+  ingress_rules = {
+    http = {
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "Public HTTP ingress redirected to HTTPS by Traefik"
+      from_port   = 80
+      ip_protocol = "tcp"
+      to_port     = 80
+    }
+
+    https = {
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "Public HTTPS ingress terminated by Traefik"
+      from_port   = 443
+      ip_protocol = "tcp"
+      to_port     = 443
+    }
+  }
+
+  egress_rules = {
+    all_ipv4 = {
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "Outbound access for bootstrap, registries, updates, and application dependencies"
+      from_port   = 0
+      ip_protocol = "-1"
+      to_port     = 0
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Tier     = "Public"
+    Workload = "ApplicationIngress"
+  })
+}
