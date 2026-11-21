@@ -1,0 +1,10 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: werant-platform
+  namespace: flux-system
+spec:
+  interval: ${repository_interval}
+  ref:
+    branch: ${repository_branch}
+  url: ${repository_url}

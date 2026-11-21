@@ -10,10 +10,15 @@ module "application_node" {
   root_volume_size_gib        = 30
   user_data = templatefile("${path.module}/bootstrap/cloud-init.yaml.tftpl", {
     flux_manifest_sha256 = local.bootstrap.flux_manifest_sha256
-    flux_version         = local.bootstrap.flux_version
-    k3s_version          = local.bootstrap.k3s_version
-    local_storage_path   = local.bootstrap.local_storage_path
-    node_name            = local.bootstrap.node_name
+    flux_source_manifest_base64 = base64encode(templatefile("${path.module}/bootstrap/flux-source.yaml.tftpl", {
+      repository_branch   = local.bootstrap.flux_repository_branch
+      repository_interval = local.bootstrap.flux_repository_interval
+      repository_url      = local.bootstrap.flux_repository_url
+    }))
+    flux_version       = local.bootstrap.flux_version
+    k3s_version        = local.bootstrap.k3s_version
+    local_storage_path = local.bootstrap.local_storage_path
+    node_name          = local.bootstrap.node_name
   })
 
   tags = merge(local.common_tags, {
