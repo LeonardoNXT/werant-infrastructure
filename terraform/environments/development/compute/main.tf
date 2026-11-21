@@ -8,6 +8,11 @@ module "application_node" {
   vpc_security_group_ids      = [local.network.application_security_group_id]
   associate_public_ip_address = true
   root_volume_size_gib        = 30
+  user_data = templatefile("${path.module}/bootstrap/cloud-init.yaml.tftpl", {
+    k3s_version        = local.bootstrap.k3s_version
+    local_storage_path = local.bootstrap.local_storage_path
+    node_name          = local.bootstrap.node_name
+  })
 
   tags = merge(local.common_tags, {
     Name     = "werant-dev-application-node"

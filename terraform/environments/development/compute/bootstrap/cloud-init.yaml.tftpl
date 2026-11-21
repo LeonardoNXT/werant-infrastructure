@@ -1,0 +1,35 @@
+#cloud-config
+bootcmd:
+  - [mkdir, -p, /var/lib/werant/bootstrap, "${local_storage_path}"]
+  - [chmod, "0700", /var/lib/werant/bootstrap]
+
+write_files:
+  - path: /etc/rancher/k3s/config.yaml
+    owner: root:root
+    permissions: "0600"
+    content: |
+      write-kubeconfig-mode: "0600"
+      node-name: "${node_name}"
+      default-local-storage-path: "${local_storage_path}"
+      secrets-encryption: true
+      secrets-encryption-provider: "secretbox"
+      node-label:
+        - "werant.io/project=werant"
+        - "werant.io/environment=development"
+        - "werant.io/lifecycle=compute"
+        - "werant.io/workload=k3s-node"
+
+runcmd:
+  - |
+      set -eu
+      curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+        --output /var/lib/werant/bootstrap/install-k3s.sh \
+        https://get.k3s.io
+      chmod 0700 /var/lib/werant/bootstrap/install-k3s.sh
+      INSTALL_K3S_VERSION='${k3s_version}' \
+        /var/lib/werant/bootstrap/install-k3s.sh server
+  - |
+      timeout 300 sh -c 'until /usr/local/bin/k3s kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 5; done'
+  - [touch, /var/lib/werant/bootstrap/k3s-ready]
+
+final_message: "Werant Development K3s bootstrap completed"

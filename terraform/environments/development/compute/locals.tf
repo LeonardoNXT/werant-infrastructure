@@ -8,6 +8,12 @@ locals {
     ManagedBy   = "Terraform"
   }
 
+  bootstrap = {
+    k3s_version        = "v1.36.6+k3s1"
+    local_storage_path = "/var/lib/rancher/k3s/storage"
+    node_name          = "werant-development"
+  }
+
   identity = {
     application_instance_profile_name = data.aws_iam_instance_profile.application.name
   }
