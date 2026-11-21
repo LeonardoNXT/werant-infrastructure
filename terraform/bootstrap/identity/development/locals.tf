@@ -68,10 +68,12 @@ locals {
   ]
 
   network_resource_arns = {
-    internet_gateway = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:internet-gateway/*"
-    route_table      = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:route-table/*"
-    subnet           = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
-    vpc              = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
+    internet_gateway    = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:internet-gateway/*"
+    route_table         = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:route-table/*"
+    security_group      = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group/*"
+    security_group_rule = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group-rule/*"
+    subnet              = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
+    vpc                 = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
   }
 
   storage_resources = {
@@ -145,7 +147,10 @@ locals {
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeInternetGateways",
           "ec2:DescribeRouteTables",
+          "ec2:DescribeSecurityGroupRules",
+          "ec2:DescribeSecurityGroups",
           "ec2:DescribeSubnets",
+          "ec2:DescribeTags",
           "ec2:DescribeVpcAttribute",
           "ec2:DescribeVpcs"
         ]
@@ -251,6 +256,50 @@ locals {
         conditions = local.network_resource_tag_conditions
       }
 
+      create_tagged_security_group = {
+        sid       = "CreateTaggedSecurityGroup"
+        effect    = "Allow"
+        actions   = ["ec2:CreateSecurityGroup"]
+        resources = [local.network_resource_arns.security_group]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      use_network_vpc_for_security_group = {
+        sid        = "UseNetworkVpcForSecurityGroup"
+        effect     = "Allow"
+        actions    = ["ec2:CreateSecurityGroup"]
+        resources  = [local.network_resource_arns.vpc]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      create_tagged_security_group_rules = {
+        sid    = "CreateTaggedSecurityGroupRules"
+        effect = "Allow"
+        actions = [
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:AuthorizeSecurityGroupIngress"
+        ]
+        resources = [local.network_resource_arns.security_group_rule]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
       tag_network_resources_during_creation = {
         sid       = "TagNetworkResourcesDuringCreation"
         effect    = "Allow"
@@ -260,7 +309,7 @@ locals {
           {
             test     = "StringEquals"
             variable = "ec2:CreateAction"
-            values   = ["CreateInternetGateway", "CreateRouteTable", "CreateSubnet", "CreateVpc"]
+            values   = ["CreateInternetGateway", "CreateRouteTable", "CreateSecurityGroup", "CreateSubnet", "CreateVpc"]
           },
           {
             test     = "ForAllValues:StringEquals"
@@ -337,6 +386,33 @@ locals {
         resources = [
           local.network_resource_arns.route_table,
           local.network_resource_arns.subnet
+        ]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      manage_network_security_group = {
+        sid        = "ManageNetworkSecurityGroup"
+        effect     = "Allow"
+        actions    = ["ec2:DeleteSecurityGroup"]
+        resources  = [local.network_resource_arns.security_group]
+        conditions = local.network_resource_tag_conditions
+      }
+
+      manage_network_security_group_rules = {
+        sid    = "ManageNetworkSecurityGroupRules"
+        effect = "Allow"
+        actions = [
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:ModifySecurityGroupRules",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+          "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+        ]
+        resources = [
+          local.network_resource_arns.security_group,
+          local.network_resource_arns.security_group_rule
         ]
         conditions = local.network_resource_tag_conditions
       }
