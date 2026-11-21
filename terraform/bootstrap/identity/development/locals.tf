@@ -789,6 +789,13 @@ locals {
     }
 
     compute_scheduler = {
+      read_execution_role = {
+        sid       = "ReadEc2SchedulerExecutionRole"
+        effect    = "Allow"
+        actions   = ["iam:GetRole"]
+        resources = [module.ec2_scheduler_role.aws_iam_role_arn]
+      }
+
       list = {
         sid    = "DiscoverComputeSchedules"
         effect = "Allow"
