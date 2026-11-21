@@ -44,6 +44,13 @@ resource "aws_instance" "ec2_instance" {
     http_tokens   = "required"
   }
 
+  root_block_device {
+    delete_on_termination = true
+    encrypted             = true
+    volume_size           = var.root_volume_size_gib
+    volume_type           = "gp3"
+  }
+
   tags        = var.tags
   volume_tags = var.tags
 }

@@ -58,6 +58,20 @@ variable "associate_public_ip_address" {
   default     = false
 }
 
+variable "root_volume_size_gib" {
+  description = "Size in GiB of the encrypted gp3 root volume"
+  type        = number
+
+  validation {
+    condition = (
+      var.root_volume_size_gib >= 8 &&
+      var.root_volume_size_gib <= 16384 &&
+      floor(var.root_volume_size_gib) == var.root_volume_size_gib
+    )
+    error_message = "root_volume_size_gib must be a whole number between 8 and 16384 GiB."
+  }
+}
+
 variable "tags" {
   description = "EC2 Instance tags"
   type        = map(string)
