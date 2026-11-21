@@ -17,6 +17,32 @@ locals {
     }
   }
 
+  compute_scheduler_common_tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Compute"
+    ManagedBy   = "Terraform"
+  }
+
+  compute_scheduler_group_arn = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule-group/${local.runtime_resources.ec2_scheduler.schedule_group_name}"
+  compute_scheduler_arn       = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule/${local.runtime_resources.ec2_scheduler.schedule_group_name}/*"
+
+  compute_scheduler_request_tag_conditions = [
+    for key, value in local.compute_scheduler_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/${key}"
+      values   = [value]
+    }
+  ]
+
+  compute_scheduler_resource_tag_conditions = [
+    for key, value in local.compute_scheduler_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/${key}"
+      values   = [value]
+    }
+  ]
+
   security_kms_common_tags = {
     Project     = "Werant"
     Environment = "Development"
@@ -757,6 +783,90 @@ locals {
             test     = "StringEquals"
             variable = "iam:PassedToService"
             values   = ["ec2.amazonaws.com"]
+          }
+        ]
+      }
+    }
+
+    compute_scheduler = {
+      list = {
+        sid    = "DiscoverComputeSchedules"
+        effect = "Allow"
+        actions = [
+          "scheduler:ListScheduleGroups",
+          "scheduler:ListSchedules"
+        ]
+        resources = ["*"]
+      }
+
+      create_tagged_group = {
+        sid    = "CreateTaggedComputeScheduleGroup"
+        effect = "Allow"
+        actions = [
+          "scheduler:CreateScheduleGroup",
+          "scheduler:TagResource"
+        ]
+        resources = [local.compute_scheduler_group_arn]
+        conditions = concat(local.compute_scheduler_request_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.compute_scheduler_common_tags), ["Workload"])
+          }
+        ])
+      }
+
+      read_and_delete_group = {
+        sid    = "ManageComputeScheduleGroup"
+        effect = "Allow"
+        actions = [
+          "scheduler:DeleteScheduleGroup",
+          "scheduler:GetScheduleGroup",
+          "scheduler:ListTagsForResource"
+        ]
+        resources  = [local.compute_scheduler_group_arn]
+        conditions = local.compute_scheduler_resource_tag_conditions
+      }
+
+      manage_group_tags = {
+        sid    = "ManageComputeScheduleGroupTags"
+        effect = "Allow"
+        actions = [
+          "scheduler:TagResource",
+          "scheduler:UntagResource"
+        ]
+        resources = [local.compute_scheduler_group_arn]
+        conditions = concat(local.compute_scheduler_resource_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.compute_scheduler_common_tags), ["Workload"])
+          }
+        ])
+      }
+
+      manage_schedules = {
+        sid    = "ManageComputeSchedules"
+        effect = "Allow"
+        actions = [
+          "scheduler:CreateSchedule",
+          "scheduler:DeleteSchedule",
+          "scheduler:GetSchedule",
+          "scheduler:UpdateSchedule"
+        ]
+        resources = [local.compute_scheduler_arn]
+      }
+
+      pass_execution_role = {
+        sid       = "PassEc2SchedulerExecutionRole"
+        effect    = "Allow"
+        actions   = ["iam:PassRole"]
+        resources = [module.ec2_scheduler_role.aws_iam_role_arn]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "iam:PassedToService"
+            values   = ["scheduler.amazonaws.com"]
           }
         ]
       }
