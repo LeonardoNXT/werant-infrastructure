@@ -195,6 +195,29 @@ resource "aws_iam_role_policy_attachment" "storage_state_access" {
   role       = module.storage_deployment_role.aws_iam_role_name
 }
 
+module "messaging_deployment_role" {
+  source                = "../../../modules/deployment-roles"
+  root_account_id       = local.deployment_settings.messaging.root_account_id
+  github_oidc_role_name = local.deployment_settings.messaging.github_oidc_role_name
+  life_cycle_name       = local.deployment_settings.messaging.life_cycle_name
+  sid                   = local.deployment_settings.messaging.sid
+  role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage messaging infrastructure in the Werant Development environment."
+}
+
+module "messaging_state_access_policy" {
+  source = "../../../modules/terraform-apply-policy"
+
+  policy_name      = "messaging-terraform-state-access-dev"
+  bucket_arn       = "arn:aws:s3:::werant-tfstate-${local.aws_accounts.management}"
+  target_state_key = "development/messaging/terraform.tfstate"
+  kms_key_arn      = var.terraform_state_kms_key_arn
+}
+
+resource "aws_iam_role_policy_attachment" "messaging_state_access" {
+  policy_arn = module.messaging_state_access_policy.aws_iam_policy_arn
+  role       = module.messaging_deployment_role.aws_iam_role_name
+}
+
 module "auth_key_rotation_lambda_role" {
   source = "../../../modules/service-roles"
 
