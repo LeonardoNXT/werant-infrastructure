@@ -72,6 +72,17 @@ variable "root_volume_size_gib" {
   }
 }
 
+variable "user_data" {
+  description = "Optional first-boot configuration consumed by cloud-init"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.user_data == null || length(trimspace(var.user_data)) > 0
+    error_message = "user_data must be null or a non-empty configuration."
+  }
+}
+
 variable "tags" {
   description = "EC2 Instance tags"
   type        = map(string)
