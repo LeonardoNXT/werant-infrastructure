@@ -10,9 +10,11 @@ output "application_node" {
 }
 
 output "application_node_power_scheduler" {
-  description = "EventBridge Scheduler group reserved for Development application node power operations"
+  description = "EventBridge Scheduler resources controlling Development application node power operations"
   value = {
-    arn  = module.application_node_power_scheduler.schedule_group_arn
-    name = module.application_node_power_scheduler.schedule_group_name
+    group_arn     = module.application_node_power_scheduler.schedule_group_arn
+    group_name    = module.application_node_power_scheduler.schedule_group_name
+    schedule_arns = module.application_node_power_scheduler.schedule_arns
+    timezone      = local.scheduler.timezone
   }
 }

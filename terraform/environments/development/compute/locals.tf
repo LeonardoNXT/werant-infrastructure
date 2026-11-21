@@ -34,6 +34,13 @@ locals {
   }
 
   scheduler = {
-    group_name = "werant-compute-operations-dev"
+    execution_role_name = "werant-ec2-scheduler-role-dev"
+    group_name          = "werant-compute-operations-dev"
+    timezone            = "America/Sao_Paulo"
+
+    target_arns = {
+      start_instances = "arn:aws:scheduler:::aws-sdk:ec2:startInstances"
+      stop_instances  = "arn:aws:scheduler:::aws-sdk:ec2:stopInstances"
+    }
   }
 }

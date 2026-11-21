@@ -42,3 +42,7 @@ data "aws_security_group" "application" {
 data "aws_iam_instance_profile" "application" {
   name = "werant-application-ec2-profile-dev"
 }
+
+data "aws_iam_role" "ec2_scheduler" {
+  name = local.scheduler.execution_role_name
+}

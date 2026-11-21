@@ -38,7 +38,51 @@ module "application_node_power_scheduler" {
   source = "../../../modules/eventbridge-scheduler"
 
   schedule_group_name = local.scheduler.group_name
-  schedules           = {}
+  schedules = {
+    start_weekdays = {
+      description                  = "Start the Development application node at 18:00 from Monday through Friday."
+      execution_role_arn           = data.aws_iam_role.ec2_scheduler.arn
+      schedule_expression          = "cron(0 18 ? * MON-FRI *)"
+      schedule_expression_timezone = local.scheduler.timezone
+      target_arn                   = local.scheduler.target_arns.start_instances
+      target_input = jsonencode({
+        InstanceIds = [module.application_node.aws_ec2_instance_id]
+      })
+    }
+
+    stop_after_weekdays = {
+      description                  = "Stop the Development application node at midnight after each weekday."
+      execution_role_arn           = data.aws_iam_role.ec2_scheduler.arn
+      schedule_expression          = "cron(0 0 ? * TUE-SAT *)"
+      schedule_expression_timezone = local.scheduler.timezone
+      target_arn                   = local.scheduler.target_arns.stop_instances
+      target_input = jsonencode({
+        InstanceIds = [module.application_node.aws_ec2_instance_id]
+      })
+    }
+
+    start_weekends = {
+      description                  = "Start the Development application node at 14:00 on Saturday and Sunday."
+      execution_role_arn           = data.aws_iam_role.ec2_scheduler.arn
+      schedule_expression          = "cron(0 14 ? * SAT-SUN *)"
+      schedule_expression_timezone = local.scheduler.timezone
+      target_arn                   = local.scheduler.target_arns.start_instances
+      target_input = jsonencode({
+        InstanceIds = [module.application_node.aws_ec2_instance_id]
+      })
+    }
+
+    stop_weekends = {
+      description                  = "Stop the Development application node at 23:00 on Saturday and Sunday."
+      execution_role_arn           = data.aws_iam_role.ec2_scheduler.arn
+      schedule_expression          = "cron(0 23 ? * SAT-SUN *)"
+      schedule_expression_timezone = local.scheduler.timezone
+      target_arn                   = local.scheduler.target_arns.stop_instances
+      target_input = jsonencode({
+        InstanceIds = [module.application_node.aws_ec2_instance_id]
+      })
+    }
+  }
 
   tags = merge(local.common_tags, {
     Workload = "Ec2OperationsScheduler"
