@@ -78,7 +78,11 @@ module "compute_state_access_policy" {
   policy_name      = "compute-terraform-state-access-dev"
   bucket_arn       = "arn:aws:s3:::werant-tfstate-${local.aws_accounts.management}"
   target_state_key = "development/compute/terraform.tfstate"
-  kms_key_arn      = var.terraform_state_kms_key_arn
+  read_only_state_keys = [
+    "bootstrap/identity/development/terraform.tfstate",
+    "development/network/terraform.tfstate"
+  ]
+  kms_key_arn = var.terraform_state_kms_key_arn
 }
 
 resource "aws_iam_role_policy_attachment" "compute_state_access" {
