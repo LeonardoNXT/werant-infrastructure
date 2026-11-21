@@ -1,23 +1,44 @@
-data "terraform_remote_state" "identity" {
-  backend = "s3"
-
-  config = {
-    bucket              = local.state_bucket_name
-    key                 = "bootstrap/identity/development/terraform.tfstate"
-    region              = "sa-east-1"
-    allowed_account_ids = [local.development_account_id]
-    encrypt             = true
+data "aws_vpc" "development" {
+  tags = {
+    Name        = "werant-dev-vpc"
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Network"
+    ManagedBy   = "Terraform"
+    Tier        = "Foundation"
+    Workload    = "CoreNetwork"
   }
 }
 
-data "terraform_remote_state" "network" {
-  backend = "s3"
+data "aws_subnet" "public" {
+  vpc_id = data.aws_vpc.development.id
 
-  config = {
-    bucket              = local.state_bucket_name
-    key                 = "development/network/terraform.tfstate"
-    region              = "sa-east-1"
-    allowed_account_ids = [local.development_account_id]
-    encrypt             = true
+  tags = {
+    Name        = "werant-dev-public-1"
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Network"
+    ManagedBy   = "Terraform"
+    Tier        = "Public"
+    Workload    = "ApplicationIngress"
   }
+}
+
+data "aws_security_group" "application" {
+  name   = "werant-dev-application"
+  vpc_id = data.aws_vpc.development.id
+
+  tags = {
+    Name        = "werant-dev-application"
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Network"
+    ManagedBy   = "Terraform"
+    Tier        = "Public"
+    Workload    = "ApplicationIngress"
+  }
+}
+
+data "aws_iam_instance_profile" "application" {
+  name = "werant-application-ec2-profile-dev"
 }
