@@ -8,3 +8,11 @@ output "application_node" {
     instance_type    = "r6g.large"
   }
 }
+
+output "application_node_power_scheduler" {
+  description = "EventBridge Scheduler group reserved for Development application node power operations"
+  value = {
+    arn  = module.application_node_power_scheduler.schedule_group_arn
+    name = module.application_node_power_scheduler.schedule_group_name
+  }
+}

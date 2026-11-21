@@ -33,3 +33,14 @@ module "application_node" {
     Workload = "K3sNode"
   })
 }
+
+module "application_node_power_scheduler" {
+  source = "../../../modules/eventbridge-scheduler"
+
+  schedule_group_name = local.scheduler.group_name
+  schedules           = {}
+
+  tags = merge(local.common_tags, {
+    Workload = "Ec2OperationsScheduler"
+  })
+}

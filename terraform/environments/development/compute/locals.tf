@@ -32,4 +32,8 @@ locals {
     public_subnet_id              = data.aws_subnet.public.id
     vpc_id                        = data.aws_vpc.development.id
   }
+
+  scheduler = {
+    group_name = "werant-compute-operations-dev"
+  }
 }
