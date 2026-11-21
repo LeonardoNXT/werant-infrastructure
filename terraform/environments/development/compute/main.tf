@@ -9,6 +9,12 @@ module "application_node" {
   associate_public_ip_address = true
   root_volume_size_gib        = 30
   user_data = templatefile("${path.module}/bootstrap/cloud-init.yaml.tftpl", {
+    flux_kustomization_manifest_base64 = base64encode(templatefile("${path.module}/bootstrap/flux-kustomization.yaml.tftpl", {
+      reconciliation_interval = local.bootstrap.flux_reconciliation_interval
+      reconciliation_timeout  = local.bootstrap.flux_reconciliation_timeout
+      repository_path         = local.bootstrap.flux_repository_path
+      retry_interval          = local.bootstrap.flux_retry_interval
+    }))
     flux_manifest_sha256 = local.bootstrap.flux_manifest_sha256
     flux_source_manifest_base64 = base64encode(templatefile("${path.module}/bootstrap/flux-source.yaml.tftpl", {
       repository_branch   = local.bootstrap.flux_repository_branch

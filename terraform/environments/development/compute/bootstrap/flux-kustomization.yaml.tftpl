@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: werant-development
+  namespace: flux-system
+spec:
+  interval: ${reconciliation_interval}
+  path: ${repository_path}
+  prune: true
+  retryInterval: ${retry_interval}
+  sourceRef:
+    kind: GitRepository
+    name: werant-platform
+  timeout: ${reconciliation_timeout}
+  wait: true

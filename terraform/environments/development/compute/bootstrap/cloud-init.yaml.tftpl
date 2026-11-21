@@ -23,6 +23,11 @@ write_files:
     permissions: "0600"
     encoding: b64
     content: ${flux_source_manifest_base64}
+  - path: /var/lib/werant/bootstrap/flux-kustomization.yaml
+    owner: root:root
+    permissions: "0600"
+    encoding: b64
+    content: ${flux_kustomization_manifest_base64}
 
 runcmd:
   - |
@@ -49,6 +54,7 @@ runcmd:
   - |
       timeout 600 sh -c 'until /usr/local/bin/k3s kubectl --namespace flux-system wait --for=condition=Available --timeout=10s deployment/source-controller deployment/kustomize-controller deployment/helm-controller deployment/notification-controller >/dev/null 2>&1; do sleep 5; done'
   - [/usr/local/bin/k3s, kubectl, apply, --filename, /var/lib/werant/bootstrap/flux-source.yaml]
+  - [/usr/local/bin/k3s, kubectl, apply, --filename, /var/lib/werant/bootstrap/flux-kustomization.yaml]
   - [touch, /var/lib/werant/bootstrap/flux-ready]
 
 final_message: "Werant Development K3s and Flux controller bootstrap completed"
