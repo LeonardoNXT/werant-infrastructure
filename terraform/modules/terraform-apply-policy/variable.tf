@@ -42,24 +42,6 @@ variable "target_state_key" {
   }
 }
 
-variable "read_only_state_keys" {
-  type        = set(string)
-  description = "Additional Terraform state object keys that may be read but not modified"
-  default     = []
-
-  validation {
-    condition = alltrue([
-      for key in var.read_only_state_keys : (
-        length(trimspace(key)) > 0 &&
-        !startswith(key, "/") &&
-        !endswith(key, "/") &&
-        !endswith(key, ".tflock")
-      )
-    ])
-    error_message = "read_only_state_keys must contain relative state object keys, not directories or lock files."
-  }
-}
-
 variable "tags" {
   type        = map(string)
   description = "Terraform Apply tags"
