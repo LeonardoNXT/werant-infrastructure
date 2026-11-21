@@ -449,6 +449,13 @@ locals {
         ]
       }
 
+      read_application_instance_profile = {
+        sid       = "ReadApplicationInstanceProfile"
+        effect    = "Allow"
+        actions   = ["iam:GetInstanceProfile"]
+        resources = [aws_iam_instance_profile.application.arn]
+      }
+
       run_amazon_ami = {
         sid     = "RunInstancesWithAmazonOwnedAmi"
         effect  = "Allow"
