@@ -16,3 +16,14 @@ output "public_subnet" {
     id                = module.public_subnet.aws_subnet_id
   }
 }
+
+output "public_routing" {
+  description = "Identifiers for the public Internet Gateway and route table"
+  value = {
+    internet_gateway_arn       = module.public_routing.internet_gateway_arn
+    internet_gateway_id        = module.public_routing.internet_gateway_id
+    route_table_arn            = module.public_routing.route_table_arn
+    route_table_association_id = module.public_routing.route_table_association_id
+    route_table_id             = module.public_routing.route_table_id
+  }
+}

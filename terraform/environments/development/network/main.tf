@@ -24,3 +24,17 @@ module "public_subnet" {
     Workload = "ApplicationIngress"
   })
 }
+
+module "public_routing" {
+  source = "../../../modules/public-routing"
+
+  vpc_id                = module.vpc.aws_vpc_id
+  subnet_id             = module.public_subnet.aws_subnet_id
+  internet_gateway_name = "werant-dev-internet-gateway"
+  route_table_name      = "werant-dev-public-routes"
+
+  tags = merge(local.common_tags, {
+    Tier     = "Public"
+    Workload = "PublicRouting"
+  })
+}
