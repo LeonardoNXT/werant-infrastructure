@@ -23,26 +23,23 @@ variable "schedules" {
   }))
 
   validation {
-    condition = (
-      length(var.schedules) > 0 &&
-      alltrue([
-        for name, schedule in var.schedules : (
-          can(regex("^[0-9A-Za-z._-]{1,64}$", name)) &&
-          (schedule.description == null ? true : length(schedule.description) <= 512) &&
-          can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+$", schedule.execution_role_arn)) &&
-          floor(schedule.maximum_event_age_in_seconds) == schedule.maximum_event_age_in_seconds &&
-          schedule.maximum_event_age_in_seconds >= 60 &&
-          schedule.maximum_event_age_in_seconds <= 86400 &&
-          floor(schedule.maximum_retry_attempts) == schedule.maximum_retry_attempts &&
-          schedule.maximum_retry_attempts >= 0 &&
-          schedule.maximum_retry_attempts <= 185 &&
-          length(trimspace(schedule.schedule_expression)) > 0 &&
-          length(trimspace(schedule.schedule_expression_timezone)) > 0 &&
-          can(regex("^arn:aws[a-z-]*:", schedule.target_arn))
-        )
-      ])
-    )
-    error_message = "schedules must define valid names, IAM execution roles, target ARNs, expressions, timezones, and retry limits."
+    condition = alltrue([
+      for name, schedule in var.schedules : (
+        can(regex("^[0-9A-Za-z._-]{1,64}$", name)) &&
+        (schedule.description == null ? true : length(schedule.description) <= 512) &&
+        can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+$", schedule.execution_role_arn)) &&
+        floor(schedule.maximum_event_age_in_seconds) == schedule.maximum_event_age_in_seconds &&
+        schedule.maximum_event_age_in_seconds >= 60 &&
+        schedule.maximum_event_age_in_seconds <= 86400 &&
+        floor(schedule.maximum_retry_attempts) == schedule.maximum_retry_attempts &&
+        schedule.maximum_retry_attempts >= 0 &&
+        schedule.maximum_retry_attempts <= 185 &&
+        length(trimspace(schedule.schedule_expression)) > 0 &&
+        length(trimspace(schedule.schedule_expression_timezone)) > 0 &&
+        can(regex("^arn:aws[a-z-]*:", schedule.target_arn))
+      )
+    ])
+    error_message = "Each configured schedule must define a valid name, IAM execution role, target ARN, expression, timezone, and retry limits."
   }
 }
 
