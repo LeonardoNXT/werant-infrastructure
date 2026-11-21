@@ -1,3 +1,14 @@
+variable "ami_architecture" {
+  description = "CPU architecture required from the Amazon Linux 2023 AMI"
+  type        = string
+  default     = "arm64"
+
+  validation {
+    condition     = contains(["arm64", "x86_64"], var.ami_architecture)
+    error_message = "ami_architecture must be arm64 or x86_64."
+  }
+}
+
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
