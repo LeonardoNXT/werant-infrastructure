@@ -8,6 +8,16 @@ data "aws_iam_policy_document" "service_trust" {
       type        = "Service"
       identifiers = var.service_principals
     }
+
+    dynamic "condition" {
+      for_each = var.trust_conditions
+
+      content {
+        test     = condition.value.test
+        variable = condition.value.variable
+        values   = condition.value.values
+      }
+    }
   }
 }
 

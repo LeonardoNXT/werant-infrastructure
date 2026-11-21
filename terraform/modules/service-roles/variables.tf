@@ -43,6 +43,30 @@ variable "sid" {
   }
 }
 
+variable "trust_conditions" {
+  description = "Optional conditions that restrict when the service principals may assume the role"
+  type = list(object({
+    test     = string
+    variable = string
+    values   = list(string)
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for condition in var.trust_conditions : (
+        length(trimspace(condition.test)) > 0 &&
+        length(trimspace(condition.variable)) > 0 &&
+        length(condition.values) > 0 &&
+        alltrue([
+          for value in condition.values : length(trimspace(value)) > 0
+        ])
+      )
+    ])
+    error_message = "Each trust condition must define a non-empty test, variable, and at least one non-empty value."
+  }
+}
+
 variable "tags" {
   description = "IAM service role tags"
   type        = map(string)
