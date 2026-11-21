@@ -10,6 +10,11 @@ locals {
       function_name  = "werant-auth-key-rotation-dev"
       log_group_name = "/aws/lambda/werant-auth-key-rotation-dev"
     }
+
+    ec2_scheduler = {
+      role_name           = "werant-ec2-scheduler-role-dev"
+      schedule_group_name = "werant-compute-operations-dev"
+    }
   }
 
   security_kms_common_tags = {

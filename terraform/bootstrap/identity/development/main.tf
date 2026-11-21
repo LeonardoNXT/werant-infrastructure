@@ -211,3 +211,36 @@ module "application_ec2_role" {
     Workload    = "ApplicationRuntime"
   }
 }
+
+module "ec2_scheduler_role" {
+  source = "../../../modules/service-roles"
+
+  role_name        = local.runtime_resources.ec2_scheduler.role_name
+  role_description = "Runtime identity assumed by EventBridge Scheduler to start and stop the Werant Development application node."
+  service_principals = [
+    "scheduler.amazonaws.com"
+  ]
+  sid = "AllowSchedulerServiceAssumption"
+  trust_conditions = [
+    {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [local.aws_accounts.development]
+    },
+    {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values = [
+        "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule-group/${local.runtime_resources.ec2_scheduler.schedule_group_name}"
+      ]
+    }
+  ]
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "Ec2OperationsScheduler"
+  }
+}

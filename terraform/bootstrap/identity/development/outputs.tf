@@ -37,3 +37,18 @@ output "application_ec2_instance_profile_name" {
   description = "Instance profile name for the Werant application EC2 instance"
   value       = aws_iam_instance_profile.application.name
 }
+
+output "ec2_scheduler_role_arn" {
+  description = "Runtime role ARN assumed by EventBridge Scheduler for EC2 power operations"
+  value       = module.ec2_scheduler_role.aws_iam_role_arn
+}
+
+output "ec2_scheduler_role_name" {
+  description = "Runtime role name assumed by EventBridge Scheduler for EC2 power operations"
+  value       = module.ec2_scheduler_role.aws_iam_role_name
+}
+
+output "ec2_scheduler_schedule_group_name" {
+  description = "Canonical EventBridge Scheduler group authorized to assume the EC2 scheduler role"
+  value       = local.runtime_resources.ec2_scheduler.schedule_group_name
+}
