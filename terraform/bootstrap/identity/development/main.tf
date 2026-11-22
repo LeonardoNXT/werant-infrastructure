@@ -239,6 +239,48 @@ resource "aws_iam_role_policy_attachment" "messaging_state_access" {
   role       = module.messaging_deployment_role.aws_iam_role_name
 }
 
+data "aws_iam_policy_document" "auth_key_rotation_code_deployment_trust" {
+  statement {
+    sid     = "AllowAuthKeyRotationGithubRoleAssumption"
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${local.aws_accounts.management}:role/${local.auth_key_rotation_code_deployment.github_oidc_role_name}"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "auth_key_rotation_code_deployment" {
+  name               = local.auth_key_rotation_code_deployment.role_name
+  description        = "Deployment identity used by the Werant Key Rotation pipeline to publish Lambda code and promote the live alias."
+  assume_role_policy = data.aws_iam_policy_document.auth_key_rotation_code_deployment_trust.json
+
+  tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Identity"
+    ManagedBy   = "Terraform"
+    Workload    = "AuthKeyRotationCodeDeployment"
+  }
+}
+
+module "auth_key_rotation_code_deployment_policy" {
+  source = "../../../modules/deployment-policy"
+
+  policy_name        = local.auth_key_rotation_code_deployment.policy_name
+  policy_description = "Allows the Werant Key Rotation delivery pipeline to publish code to the designated Lambda and promote only its live alias."
+  role_statements    = local.auth_key_rotation_code_deployment_statements
+}
+
+resource "aws_iam_role_policy_attachment" "auth_key_rotation_code_deployment" {
+  policy_arn = module.auth_key_rotation_code_deployment_policy.aws_iam_policy_document_arn
+  role       = aws_iam_role.auth_key_rotation_code_deployment.name
+}
+
 module "auth_key_rotation_lambda_role" {
   source = "../../../modules/service-roles"
 

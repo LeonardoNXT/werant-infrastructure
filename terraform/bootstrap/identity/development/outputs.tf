@@ -3,6 +3,16 @@ output "auth_key_rotation_lambda_role_arn" {
   value       = module.auth_key_rotation_lambda_role.aws_iam_role_arn
 }
 
+output "auth_key_rotation_code_deployment_role_arn" {
+  description = "Role ARN assumed by the Werant Key Rotation GitHub pipeline to deploy Lambda code"
+  value       = aws_iam_role.auth_key_rotation_code_deployment.arn
+}
+
+output "auth_key_rotation_code_deployment_role_name" {
+  description = "Role name assumed by the Werant Key Rotation GitHub pipeline to deploy Lambda code"
+  value       = aws_iam_role.auth_key_rotation_code_deployment.name
+}
+
 output "auth_key_rotation_lambda_role_name" {
   description = "Runtime role name for the Auth Key Rotation Lambda"
   value       = module.auth_key_rotation_lambda_role.aws_iam_role_name

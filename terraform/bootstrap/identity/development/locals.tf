@@ -23,6 +23,45 @@ locals {
     }
   }
 
+  auth_key_rotation_code_deployment = {
+    github_oidc_role_name = "auth-key-rotation-github-oidc-role-dev"
+    role_name             = "auth-key-rotation-code-deploy-role-dev"
+    policy_name           = "auth-key-rotation-code-deploy-policy-dev"
+  }
+
+  auth_key_rotation_function_arn = "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}"
+
+  auth_key_rotation_code_deployment_statements = {
+    read_function_deployment = {
+      sid    = "ReadAuthKeyRotationFunctionDeployment"
+      effect = "Allow"
+      actions = [
+        "lambda:GetFunctionConfiguration"
+      ]
+      resources = [local.auth_key_rotation_function_arn]
+    }
+
+    publish_function_code = {
+      sid    = "PublishAuthKeyRotationFunctionCode"
+      effect = "Allow"
+      actions = [
+        "lambda:PublishVersion",
+        "lambda:UpdateFunctionCode"
+      ]
+      resources = [local.auth_key_rotation_function_arn]
+    }
+
+    promote_live_alias = {
+      sid    = "PromoteAuthKeyRotationLiveAlias"
+      effect = "Allow"
+      actions = [
+        "lambda:GetAlias",
+        "lambda:UpdateAlias"
+      ]
+      resources = [local.auth_key_rotation_alias_arn]
+    }
+  }
+
   compute_scheduler_common_tags = {
     Project     = "Werant"
     Environment = "Development"
@@ -58,7 +97,7 @@ locals {
 
   messaging_scheduler_group_arn = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule-group/${local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name}"
   messaging_scheduler_arn       = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule/${local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name}/*"
-  auth_key_rotation_alias_arn   = "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}:${local.runtime_resources.auth_key_rotation_lambda.alias_name}"
+  auth_key_rotation_alias_arn   = "${local.auth_key_rotation_function_arn}:${local.runtime_resources.auth_key_rotation_lambda.alias_name}"
 
   messaging_scheduler_request_tag_conditions = [
     for key, value in local.messaging_scheduler_common_tags : {
