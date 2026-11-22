@@ -15,6 +15,7 @@ output "public_subnet" {
     availability_zone = local.primary_availability_zone
     cidr_block        = local.cidr_blocks.public_subnet
     id                = module.public_subnet.aws_subnet_id
+    ipv6_cidr_block   = module.public_subnet.aws_subnet_ipv6_cidr_block
   }
 }
 

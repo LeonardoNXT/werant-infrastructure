@@ -426,9 +426,11 @@ locals {
         sid    = "ManageNetworkResourceLifecycle"
         effect = "Allow"
         actions = [
+          "ec2:AssociateSubnetCidrBlock",
           "ec2:AssociateVpcCidrBlock",
           "ec2:DeleteSubnet",
           "ec2:DeleteVpc",
+          "ec2:DisassociateSubnetCidrBlock",
           "ec2:DisassociateVpcCidrBlock",
           "ec2:ModifySubnetAttribute",
           "ec2:ModifyVpcAttribute"

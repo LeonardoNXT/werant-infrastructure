@@ -14,10 +14,13 @@ module "vpc" {
 module "public_subnet" {
   source = "../../../modules/subnet-instance"
 
-  vpc_id                  = module.vpc.aws_vpc_id
-  availability_zone       = local.primary_availability_zone
-  cidr_block              = local.cidr_blocks.public_subnet
-  map_public_ip_on_launch = true
+  vpc_id                                         = module.vpc.aws_vpc_id
+  availability_zone                              = local.primary_availability_zone
+  cidr_block                                     = local.cidr_blocks.public_subnet
+  ipv6_cidr_block                                = cidrsubnet(module.vpc.aws_vpc_ipv6_cidr_block, 8, 0)
+  map_public_ip_on_launch                        = true
+  assign_ipv6_address_on_creation                = true
+  enable_resource_name_dns_aaaa_record_on_launch = true
 
   tags = merge(local.common_tags, {
     Name     = "werant-dev-public-1"

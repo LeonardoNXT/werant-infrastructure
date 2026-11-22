@@ -32,8 +32,29 @@ variable "cidr_block" {
   }
 }
 
+variable "ipv6_cidr_block" {
+  description = "Optional IPv6 /64 CIDR block assigned to the subnet"
+  type        = string
+  default     = null
+
+  validation {
+    condition = var.ipv6_cidr_block == null || (
+      can(cidrhost(var.ipv6_cidr_block, 0)) &&
+      strcontains(var.ipv6_cidr_block, ":") &&
+      try(tonumber(split("/", var.ipv6_cidr_block)[1]), 0) == 64
+    )
+    error_message = "ipv6_cidr_block must be null or a valid IPv6 /64 CIDR."
+  }
+}
+
 variable "map_public_ip_on_launch" {
   description = "Whether network interfaces created in the subnet receive public IPv4 addresses by default"
+  type        = bool
+  default     = false
+}
+
+variable "assign_ipv6_address_on_creation" {
+  description = "Whether new network interfaces receive IPv6 addresses from the subnet"
   type        = bool
   default     = false
 }
@@ -53,6 +74,12 @@ variable "enable_resource_name_dns_a_record_on_launch" {
   description = "Whether resource-name hostnames receive DNS A records"
   type        = bool
   default     = true
+}
+
+variable "enable_resource_name_dns_aaaa_record_on_launch" {
+  description = "Whether resource-name hostnames receive IPv6 DNS AAAA records"
+  type        = bool
+  default     = false
 }
 
 variable "tags" {
