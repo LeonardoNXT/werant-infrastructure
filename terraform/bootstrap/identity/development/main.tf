@@ -204,6 +204,27 @@ module "messaging_deployment_role" {
   role_description      = "IAM role assumed by GitHub Actions via OIDC to provision and manage messaging infrastructure in the Werant Development environment."
 }
 
+module "messaging_deployment_policy" {
+  source             = "../../../modules/deployment-policy"
+  policy_name        = "AllowMessagingSchedulerPolicies"
+  policy_description = "IAM policy granting the permissions required to provision and manage the Werant Development Auth Key Rotation schedule."
+  role_statements = {
+    for name, config in local.policies.messaging :
+    name => {
+      sid        = config.sid
+      effect     = config.effect
+      actions    = config.actions
+      resources  = config.resources
+      conditions = try(config.conditions, [])
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "messaging_deployment" {
+  policy_arn = module.messaging_deployment_policy.aws_iam_policy_document_arn
+  role       = module.messaging_deployment_role.aws_iam_role_name
+}
+
 module "messaging_state_access_policy" {
   source = "../../../modules/terraform-apply-policy"
 

@@ -49,6 +49,33 @@ locals {
     }
   ]
 
+  messaging_scheduler_common_tags = {
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Messaging"
+    ManagedBy   = "Terraform"
+  }
+
+  messaging_scheduler_group_arn = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule-group/${local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name}"
+  messaging_scheduler_arn       = "arn:aws:scheduler:sa-east-1:${local.aws_accounts.development}:schedule/${local.runtime_resources.auth_key_rotation_scheduler.schedule_group_name}/*"
+  auth_key_rotation_alias_arn   = "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}:${local.runtime_resources.auth_key_rotation_lambda.alias_name}"
+
+  messaging_scheduler_request_tag_conditions = [
+    for key, value in local.messaging_scheduler_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/${key}"
+      values   = [value]
+    }
+  ]
+
+  messaging_scheduler_resource_tag_conditions = [
+    for key, value in local.messaging_scheduler_common_tags : {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/${key}"
+      values   = [value]
+    }
+  ]
+
   security_kms_common_tags = {
     Project     = "Werant"
     Environment = "Development"
@@ -1199,6 +1226,104 @@ locals {
         ]
         resources  = [local.storage_resources.application_buckets.arn]
         conditions = local.storage_bucket_conditions
+      }
+    }
+
+    messaging = {
+      read_execution_role = {
+        sid       = "ReadKeyRotationSchedulerExecutionRole"
+        effect    = "Allow"
+        actions   = ["iam:GetRole"]
+        resources = [module.auth_key_rotation_scheduler_role.aws_iam_role_arn]
+      }
+
+      read_lambda_alias = {
+        sid       = "ReadAuthKeyRotationLambdaAlias"
+        effect    = "Allow"
+        actions   = ["lambda:GetAlias"]
+        resources = [local.auth_key_rotation_alias_arn]
+      }
+
+      list = {
+        sid    = "DiscoverKeyRotationSchedules"
+        effect = "Allow"
+        actions = [
+          "scheduler:ListScheduleGroups",
+          "scheduler:ListSchedules"
+        ]
+        resources = ["*"]
+      }
+
+      create_tagged_group = {
+        sid    = "CreateTaggedKeyRotationScheduleGroup"
+        effect = "Allow"
+        actions = [
+          "scheduler:CreateScheduleGroup",
+          "scheduler:TagResource"
+        ]
+        resources = [local.messaging_scheduler_group_arn]
+        conditions = concat(local.messaging_scheduler_request_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.messaging_scheduler_common_tags), ["Workload"])
+          }
+        ])
+      }
+
+      read_and_delete_group = {
+        sid    = "ManageKeyRotationScheduleGroup"
+        effect = "Allow"
+        actions = [
+          "scheduler:DeleteScheduleGroup",
+          "scheduler:GetScheduleGroup",
+          "scheduler:ListTagsForResource"
+        ]
+        resources  = [local.messaging_scheduler_group_arn]
+        conditions = local.messaging_scheduler_resource_tag_conditions
+      }
+
+      manage_group_tags = {
+        sid    = "ManageKeyRotationScheduleGroupTags"
+        effect = "Allow"
+        actions = [
+          "scheduler:TagResource",
+          "scheduler:UntagResource"
+        ]
+        resources = [local.messaging_scheduler_group_arn]
+        conditions = concat(local.messaging_scheduler_resource_tag_conditions, [
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.messaging_scheduler_common_tags), ["Workload"])
+          }
+        ])
+      }
+
+      manage_schedules = {
+        sid    = "ManageKeyRotationSchedules"
+        effect = "Allow"
+        actions = [
+          "scheduler:CreateSchedule",
+          "scheduler:DeleteSchedule",
+          "scheduler:GetSchedule",
+          "scheduler:UpdateSchedule"
+        ]
+        resources = [local.messaging_scheduler_arn]
+      }
+
+      pass_execution_role = {
+        sid       = "PassKeyRotationSchedulerExecutionRole"
+        effect    = "Allow"
+        actions   = ["iam:PassRole"]
+        resources = [module.auth_key_rotation_scheduler_role.aws_iam_role_arn]
+        conditions = [
+          {
+            test     = "StringEquals"
+            variable = "iam:PassedToService"
+            values   = ["scheduler.amazonaws.com"]
+          }
+        ]
       }
     }
   }
