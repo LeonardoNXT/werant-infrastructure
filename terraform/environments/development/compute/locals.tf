@@ -25,12 +25,21 @@ locals {
 
   identity = {
     application_instance_profile_name = data.aws_iam_instance_profile.application.name
+    auth_key_rotation_lambda_role_arn = data.aws_iam_role.auth_key_rotation_lambda.arn
   }
 
   network = {
-    application_security_group_id = data.aws_security_group.application.id
-    public_subnet_id              = data.aws_subnet.public.id
-    vpc_id                        = data.aws_vpc.development.id
+    application_security_group_id       = data.aws_security_group.application.id
+    auth_key_rotation_security_group_id = data.aws_security_group.auth_key_rotation_lambda.id
+    public_subnet_id                    = data.aws_subnet.public.id
+    vpc_id                              = data.aws_vpc.development.id
+  }
+
+  auth_key_rotation = {
+    function_name                  = "werant-auth-key-rotation-dev"
+    kms_key_alias                  = "alias/werant-auth-envelope-encryption-dev"
+    postgres_node_port             = 30432
+    postgres_secret_parameter_name = "/werant/development/auth/postgres"
   }
 
   scheduler = {

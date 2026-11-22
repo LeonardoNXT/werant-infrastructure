@@ -6,6 +6,7 @@ output "application_node" {
     arn              = module.application_node.aws_ec2_instance_arn
     id               = module.application_node.aws_ec2_instance_id
     instance_type    = "r6g.large"
+    private_ip       = module.application_node.aws_ec2_instance_private_ip
   }
 }
 

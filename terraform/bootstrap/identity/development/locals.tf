@@ -595,6 +595,13 @@ locals {
         resources = [aws_iam_instance_profile.application.arn]
       }
 
+      read_auth_key_rotation_lambda_role = {
+        sid       = "ReadAuthKeyRotationLambdaRole"
+        effect    = "Allow"
+        actions   = ["iam:GetRole"]
+        resources = [module.auth_key_rotation_lambda_role.aws_iam_role_arn]
+      }
+
       run_amazon_ami = {
         sid     = "RunInstancesWithAmazonOwnedAmi"
         effect  = "Allow"

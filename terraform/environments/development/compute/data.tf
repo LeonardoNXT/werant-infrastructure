@@ -39,10 +39,29 @@ data "aws_security_group" "application" {
   }
 }
 
+data "aws_security_group" "auth_key_rotation_lambda" {
+  name   = "werant-dev-auth-key-rotation-lambda"
+  vpc_id = data.aws_vpc.development.id
+
+  tags = {
+    Name        = "werant-dev-auth-key-rotation-lambda"
+    Project     = "Werant"
+    Environment = "Development"
+    Lifecycle   = "Network"
+    ManagedBy   = "Terraform"
+    Tier        = "Private"
+    Workload    = "AuthKeyRotation"
+  }
+}
+
 data "aws_iam_instance_profile" "application" {
   name = "werant-application-ec2-profile-dev"
 }
 
 data "aws_iam_role" "ec2_scheduler" {
   name = local.scheduler.execution_role_name
+}
+
+data "aws_iam_role" "auth_key_rotation_lambda" {
+  name = "auth-key-rotation-lambda-role-dev"
 }
