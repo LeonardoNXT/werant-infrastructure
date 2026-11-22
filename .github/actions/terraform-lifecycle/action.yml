@@ -1,0 +1,59 @@
+name: Terraform lifecycle operation
+description: Initialize, validate, plan, and optionally apply one Werant Terraform lifecycle.
+
+inputs:
+  operation:
+    description: Terraform operation to execute. Must be plan or apply.
+    required: true
+  terraform-version:
+    description: Terraform CLI version installed for the lifecycle operation.
+    required: false
+    default: 1.17.2
+  working-directory:
+    description: Terraform root module directory.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate operation
+      shell: bash
+      env:
+        TF_OPERATION: ${{ inputs.operation }}
+      run: |
+        if [[ "$TF_OPERATION" != "plan" && "$TF_OPERATION" != "apply" ]]; then
+          echo "Unsupported Terraform operation: $TF_OPERATION" >&2
+          exit 1
+        fi
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+
+    - name: Check Terraform formatting
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform fmt -check -recursive -diff
+
+    - name: Initialize Terraform
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform init -input=false
+
+    - name: Validate Terraform configuration
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform validate -no-color
+
+    - name: Create Terraform plan
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform plan -input=false -lock-timeout=5m -no-color -out=tfplan
+
+    - name: Apply reviewed Terraform plan
+      if: ${{ inputs.operation == 'apply' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform apply -input=false -lock-timeout=5m -no-color tfplan
