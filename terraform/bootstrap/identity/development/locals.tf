@@ -579,6 +579,7 @@ locals {
         effect = "Allow"
         actions = [
           "ec2:Describe*",
+          "ec2:GetSecurityGroupsForVpc",
           "lambda:Get*",
           "lambda:List*"
         ]

@@ -10,6 +10,41 @@ data "aws_iam_policy_document" "auth_key_rotation_lambda_runtime" {
       "arn:aws:logs:sa-east-1:${local.aws_accounts.development}:log-group:${local.runtime_resources.auth_key_rotation_lambda.log_group_name}:*"
     ]
   }
+
+
+  statement {
+    sid    = "ManageLambdaVpcNetworkInterfaces"
+    effect = "Allow"
+    actions = [
+      "ec2:AssignPrivateIpAddresses",
+      "ec2:CreateNetworkInterface",
+      "ec2:DeleteNetworkInterface",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeSubnets",
+      "ec2:UnassignPrivateIpAddresses"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "DenyFunctionCodeEniManagement"
+    effect = "Deny"
+    actions = [
+      "ec2:AssignPrivateIpAddresses",
+      "ec2:CreateNetworkInterface",
+      "ec2:DeleteNetworkInterface",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeSubnets",
+      "ec2:UnassignPrivateIpAddresses"
+    ]
+    resources = ["*"]
+
+    condition {
+      test     = "ArnEquals"
+      variable = "lambda:SourceFunctionArn"
+      values   = [local.auth_key_rotation_function_arn]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "auth_key_rotation_lambda_runtime" {
