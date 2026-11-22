@@ -9,6 +9,10 @@ locals {
   }
 
   key_rotation_scheduler = {
-    group_name = "werant-auth-key-rotation-dev"
+    execution_role_name  = "werant-auth-key-rotation-scheduler-role-dev"
+    group_name           = "werant-auth-key-rotation-dev"
+    lambda_alias_name    = "live"
+    lambda_function_name = "werant-auth-key-rotation-dev"
+    timezone             = "America/Sao_Paulo"
   }
 }
