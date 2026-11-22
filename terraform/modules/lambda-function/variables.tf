@@ -139,6 +139,32 @@ variable "environment_variables" {
   default     = {}
 }
 
+variable "vpc_config" {
+  description = "Optional VPC attachment used when the function must reach private resources"
+  type = object({
+    ipv6_allowed_for_dual_stack = optional(bool, false)
+    security_group_ids          = set(string)
+    subnet_ids                  = set(string)
+  })
+  default = null
+
+  validation {
+    condition = var.vpc_config == null ? true : (
+      length(var.vpc_config.security_group_ids) > 0 &&
+      length(var.vpc_config.subnet_ids) > 0 &&
+      alltrue([
+        for security_group_id in var.vpc_config.security_group_ids :
+        can(regex("^sg-([0-9a-f]{8}|[0-9a-f]{17})$", security_group_id))
+      ]) &&
+      alltrue([
+        for subnet_id in var.vpc_config.subnet_ids :
+        can(regex("^subnet-([0-9a-f]{8}|[0-9a-f]{17})$", subnet_id))
+      ])
+    )
+    error_message = "vpc_config must contain at least one valid Security Group ID and subnet ID."
+  }
+}
+
 variable "log_retention_in_days" {
   description = "CloudWatch Logs retention period in days"
   type        = number

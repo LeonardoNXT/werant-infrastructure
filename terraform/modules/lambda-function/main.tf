@@ -28,6 +28,16 @@ resource "aws_lambda_function" "function" {
     }
   }
 
+  dynamic "vpc_config" {
+    for_each = var.vpc_config == null ? [] : [var.vpc_config]
+
+    content {
+      ipv6_allowed_for_dual_stack = vpc_config.value.ipv6_allowed_for_dual_stack
+      security_group_ids          = vpc_config.value.security_group_ids
+      subnet_ids                  = vpc_config.value.subnet_ids
+    }
+  }
+
   tags = var.tags
 
   depends_on = [aws_cloudwatch_log_group.function]
