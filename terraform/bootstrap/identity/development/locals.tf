@@ -171,12 +171,13 @@ locals {
   ]
 
   network_resource_arns = {
-    internet_gateway    = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:internet-gateway/*"
-    route_table         = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:route-table/*"
-    security_group      = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group/*"
-    security_group_rule = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group-rule/*"
-    subnet              = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
-    vpc                 = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
+    egress_only_internet_gateway = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:egress-only-internet-gateway/*"
+    internet_gateway             = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:internet-gateway/*"
+    route_table                  = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:route-table/*"
+    security_group               = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group/*"
+    security_group_rule          = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:security-group-rule/*"
+    subnet                       = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:subnet/*"
+    vpc                          = "arn:aws:ec2:sa-east-1:${local.aws_accounts.development}:vpc/*"
   }
 
   storage_resources = {
@@ -248,6 +249,7 @@ locals {
         effect = "Allow"
         actions = [
           "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeEgressOnlyInternetGateways",
           "ec2:DescribeInternetGateways",
           "ec2:DescribeRouteTables",
           "ec2:DescribeSecurityGroupRules",
@@ -332,6 +334,33 @@ locals {
         ])
       }
 
+      create_tagged_egress_only_internet_gateway = {
+        sid       = "CreateTaggedEgressOnlyInternetGateway"
+        effect    = "Allow"
+        actions   = ["ec2:CreateEgressOnlyInternetGateway"]
+        resources = [local.network_resource_arns.egress_only_internet_gateway]
+        conditions = concat(local.network_request_tag_conditions, [
+          {
+            test     = "StringEquals"
+            variable = "ec2:Region"
+            values   = ["sa-east-1"]
+          },
+          {
+            test     = "ForAllValues:StringEquals"
+            variable = "aws:TagKeys"
+            values   = concat(keys(local.network_common_tags), ["Name", "Tier", "Workload"])
+          }
+        ])
+      }
+
+      use_network_vpc_for_egress_only_internet_gateway = {
+        sid        = "UseNetworkVpcForEgressOnlyInternetGateway"
+        effect     = "Allow"
+        actions    = ["ec2:CreateEgressOnlyInternetGateway"]
+        resources  = [local.network_resource_arns.vpc]
+        conditions = local.network_resource_tag_conditions
+      }
+
       create_tagged_route_table = {
         sid       = "CreateTaggedRouteTable"
         effect    = "Allow"
@@ -412,7 +441,7 @@ locals {
           {
             test     = "StringEquals"
             variable = "ec2:CreateAction"
-            values   = ["CreateInternetGateway", "CreateRouteTable", "CreateSecurityGroup", "CreateSubnet", "CreateVpc"]
+            values   = ["CreateEgressOnlyInternetGateway", "CreateInternetGateway", "CreateRouteTable", "CreateSecurityGroup", "CreateSubnet", "CreateVpc"]
           },
           {
             test     = "ForAllValues:StringEquals"
@@ -460,10 +489,12 @@ locals {
         sid    = "ManageNetworkRoutingResources"
         effect = "Allow"
         actions = [
+          "ec2:DeleteEgressOnlyInternetGateway",
           "ec2:DeleteInternetGateway",
           "ec2:DeleteRouteTable"
         ]
         resources = [
+          local.network_resource_arns.egress_only_internet_gateway,
           local.network_resource_arns.internet_gateway,
           local.network_resource_arns.route_table
         ]

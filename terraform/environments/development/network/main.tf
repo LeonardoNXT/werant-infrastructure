@@ -36,6 +36,7 @@ module "public_routing" {
   subnet_id             = module.public_subnet.aws_subnet_id
   internet_gateway_name = "werant-dev-internet-gateway"
   route_table_name      = "werant-dev-public-routes"
+  enable_ipv6_egress    = true
 
   tags = merge(local.common_tags, {
     Tier     = "Public"

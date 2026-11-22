@@ -44,6 +44,12 @@ variable "route_table_name" {
   }
 }
 
+variable "enable_ipv6_egress" {
+  description = "Whether to create a free egress-only Internet Gateway and ::/0 IPv6 route"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Ownership and workload tags shared by the routing resources"
   type        = map(string)

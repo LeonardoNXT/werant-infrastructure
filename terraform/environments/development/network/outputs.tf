@@ -24,6 +24,8 @@ output "public_routing" {
   value = {
     internet_gateway_arn       = module.public_routing.internet_gateway_arn
     internet_gateway_id        = module.public_routing.internet_gateway_id
+    ipv6_egress_gateway_id     = module.public_routing.ipv6_egress_only_internet_gateway_id
+    ipv6_egress_route_id       = module.public_routing.ipv6_egress_route_id
     route_table_arn            = module.public_routing.route_table_arn
     route_table_association_id = module.public_routing.route_table_association_id
     route_table_id             = module.public_routing.route_table_id

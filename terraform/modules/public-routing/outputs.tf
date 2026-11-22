@@ -8,6 +8,16 @@ output "internet_gateway_id" {
   value       = aws_internet_gateway.gateway.id
 }
 
+output "ipv6_egress_only_internet_gateway_id" {
+  description = "ID of the IPv6 egress-only Internet Gateway, when enabled"
+  value       = try(aws_egress_only_internet_gateway.ipv6[0].id, null)
+}
+
+output "ipv6_egress_route_id" {
+  description = "ID of the ::/0 route through the egress-only Internet Gateway, when enabled"
+  value       = try(aws_route.ipv6_egress[0].id, null)
+}
+
 output "route_table_arn" {
   description = "ARN of the public route table"
   value       = aws_route_table.public.arn
