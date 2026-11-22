@@ -152,3 +152,34 @@ resource "aws_iam_role_policy_attachment" "messaging_role_policy_attachment" {
   policy_arn = module.aws_messaging_oidc_policy_dev.aws_github_oidc_policy_arn
   role       = module.aws_messaging_oidc_role_dev.aws_iam_role_name
 }
+
+module "aws_auth_key_rotation_oidc_role_dev" {
+  source           = "../../../modules/github-roles"
+  role_name        = "auth-key-rotation-github-oidc-role-dev"
+  role_description = "Federated IAM role restricted to the Werant Key Rotation Lambda deployment workflow in Development."
+
+  federated_oidc_provider_arn = module.aws_federated_provider_oidc.aws_identity_provider_arn
+  custom_conditions = {
+    "token.actions.githubusercontent.com:sub" : format("repo:%s@%s/%s@%s:environment:%s", local.key_rotation_github.owner_name, local.key_rotation_github.owner_id, local.key_rotation_github.repository_name, local.key_rotation_github.repository_id, local.development.environment_name)
+    "token.actions.githubusercontent.com:repository_owner_id" : local.key_rotation_github.owner_id
+    "token.actions.githubusercontent.com:repository_id" : local.key_rotation_github.repository_id
+    "token.actions.githubusercontent.com:environment" : local.development.environment_name
+    "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.key_rotation_github.workflow_ref
+  }
+}
+
+module "aws_auth_key_rotation_oidc_policy_dev" {
+  source            = "../../../modules/github-oidc-policy"
+  oidc_policy_name  = "auth-key-rotation-github-oidc-policy-dev"
+  target_account_id = local.aws_accounts.development
+
+  oidc_policy_document_sid       = "AllowGithubOidcAuthKeyRotationDev"
+  oidc_policy_description        = "Allows only the Werant Key Rotation deployment workflow to assume its code deployment role in Development."
+  oidc_policy_document_role_name = "auth-key-rotation-code-deploy-role-dev"
+}
+
+resource "aws_iam_role_policy_attachment" "auth_key_rotation_role_policy_attachment" {
+  policy_arn = module.aws_auth_key_rotation_oidc_policy_dev.aws_github_oidc_policy_arn
+  role       = module.aws_auth_key_rotation_oidc_role_dev.aws_iam_role_name
+}
