@@ -107,3 +107,31 @@ module "auth_key_rotation_lambda_security_group" {
     Workload = "AuthKeyRotation"
   })
 }
+
+resource "aws_vpc_security_group_egress_rule" "auth_key_rotation_lambda_to_postgres" {
+  security_group_id            = module.auth_key_rotation_lambda_security_group.id
+  referenced_security_group_id = module.application_security_group.id
+  description                  = "PostgreSQL NodePort on the Development K3s application node"
+  from_port                    = local.ports.auth_key_rotation_postgres_node
+  ip_protocol                  = "tcp"
+  to_port                      = local.ports.auth_key_rotation_postgres_node
+
+  tags = merge(local.common_tags, {
+    Tier     = "Private"
+    Workload = "AuthKeyRotation"
+  })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "postgres_from_auth_key_rotation_lambda" {
+  security_group_id            = module.application_security_group.id
+  referenced_security_group_id = module.auth_key_rotation_lambda_security_group.id
+  description                  = "PostgreSQL NodePort access from the Auth Key Rotation Lambda only"
+  from_port                    = local.ports.auth_key_rotation_postgres_node
+  ip_protocol                  = "tcp"
+  to_port                      = local.ports.auth_key_rotation_postgres_node
+
+  tags = merge(local.common_tags, {
+    Tier     = "Private"
+    Workload = "AuthKeyRotation"
+  })
+}

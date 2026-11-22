@@ -7,6 +7,10 @@ locals {
     vpc           = "10.0.0.0/16"
   }
 
+  ports = {
+    auth_key_rotation_postgres_node = 30432
+  }
+
   common_tags = {
     Project     = "Werant"
     Environment = "Development"

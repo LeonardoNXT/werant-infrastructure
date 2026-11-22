@@ -51,3 +51,8 @@ output "auth_key_rotation_lambda_security_group_arn" {
   description = "ARN of the Security Group attached to the Auth Key Rotation Lambda"
   value       = module.auth_key_rotation_lambda_security_group.arn
 }
+
+output "auth_key_rotation_postgres_node_port" {
+  description = "K3s NodePort reserved for private PostgreSQL access from the Auth Key Rotation Lambda"
+  value       = local.ports.auth_key_rotation_postgres_node
+}
