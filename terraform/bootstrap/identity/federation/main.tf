@@ -15,6 +15,7 @@ module "aws_network_oidc_role_dev" {
     "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
     "token.actions.githubusercontent.com:environment" : local.development.environment_name
     "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.github.workflow_refs.network
   }
 }
 
@@ -45,6 +46,7 @@ module "aws_compute_oidc_role_dev" {
     "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
     "token.actions.githubusercontent.com:environment" : local.development.environment_name
     "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.github.workflow_refs.compute
   }
 }
 
@@ -75,6 +77,7 @@ module "aws_security_oidc_role_dev" {
     "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
     "token.actions.githubusercontent.com:environment" : local.development.environment_name
     "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.github.workflow_refs.security
   }
 }
 
@@ -105,6 +108,7 @@ module "aws_storage_oidc_role_dev" {
     "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
     "token.actions.githubusercontent.com:environment" : local.development.environment_name
     "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.github.workflow_refs.storage
   }
 }
 
@@ -135,6 +139,7 @@ module "aws_messaging_oidc_role_dev" {
     "token.actions.githubusercontent.com:repository_id" : local.github.repository_id
     "token.actions.githubusercontent.com:environment" : local.development.environment_name
     "token.actions.githubusercontent.com:ref" : "refs/heads/main"
+    "token.actions.githubusercontent.com:job_workflow_ref" : local.github.workflow_refs.messaging
   }
 }
 
