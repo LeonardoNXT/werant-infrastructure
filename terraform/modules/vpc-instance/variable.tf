@@ -12,6 +12,12 @@ variable "cidr_block" {
   }
 }
 
+variable "assign_generated_ipv6_cidr_block" {
+  description = "Whether AWS assigns an Amazon-provided IPv6 CIDR block to the VPC"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Ownership and workload tags applied to the VPC"
   type        = map(string)

@@ -1,7 +1,8 @@
 module "vpc" {
   source = "../../../modules/vpc-instance"
 
-  cidr_block = local.cidr_blocks.vpc
+  cidr_block                       = local.cidr_blocks.vpc
+  assign_generated_ipv6_cidr_block = true
 
   tags = merge(local.common_tags, {
     Name     = "werant-dev-vpc"

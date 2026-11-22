@@ -1,9 +1,10 @@
 output "vpc" {
   description = "Identifiers and CIDR for the Development VPC"
   value = {
-    arn        = module.vpc.aws_vpc_arn
-    cidr_block = local.cidr_blocks.vpc
-    id         = module.vpc.aws_vpc_id
+    arn             = module.vpc.aws_vpc_arn
+    cidr_block      = local.cidr_blocks.vpc
+    id              = module.vpc.aws_vpc_id
+    ipv6_cidr_block = module.vpc.aws_vpc_ipv6_cidr_block
   }
 }
 

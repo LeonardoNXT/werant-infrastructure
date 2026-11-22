@@ -1,8 +1,9 @@
 resource "aws_vpc" "virtual_connection" {
-  cidr_block           = var.cidr_block
-  instance_tenancy     = "default"
-  enable_dns_support   = var.enable_dns_support
-  enable_dns_hostnames = var.enable_dns_hostnames
+  cidr_block                       = var.cidr_block
+  assign_generated_ipv6_cidr_block = var.assign_generated_ipv6_cidr_block
+  instance_tenancy                 = "default"
+  enable_dns_support               = var.enable_dns_support
+  enable_dns_hostnames             = var.enable_dns_hostnames
 
   tags = var.tags
 
