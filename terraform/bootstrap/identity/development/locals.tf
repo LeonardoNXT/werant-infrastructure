@@ -29,7 +29,8 @@ locals {
     policy_name           = "auth-key-rotation-code-deploy-policy-dev"
   }
 
-  auth_key_rotation_function_arn = "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}"
+  auth_key_rotation_function_arn           = "arn:aws:lambda:sa-east-1:${local.aws_accounts.development}:function:${local.runtime_resources.auth_key_rotation_lambda.function_name}"
+  auth_key_rotation_postgres_parameter_arn = "arn:aws:ssm:sa-east-1:${local.aws_accounts.development}:parameter/werant/development/auth/postgres"
 
   auth_key_rotation_code_deployment_statements = {
     read_function_deployment = {

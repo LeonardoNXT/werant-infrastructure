@@ -27,6 +27,13 @@ data "aws_iam_policy_document" "auth_key_rotation_lambda_runtime" {
   }
 
   statement {
+    sid       = "ReadPostgresConnectionParameter"
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = [local.auth_key_rotation_postgres_parameter_arn]
+  }
+
+  statement {
     sid    = "DenyFunctionCodeEniManagement"
     effect = "Deny"
     actions = [
