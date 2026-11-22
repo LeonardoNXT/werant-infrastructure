@@ -1,0 +1,67 @@
+name: Terraform Compute
+run-name: Terraform compute ${{ inputs.operation }} by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Terraform operation to execute
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-development-compute
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Compute ${{ inputs.operation }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: development
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Authenticate with the Management account
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: sa-east-1
+          role-to-assume: arn:aws:iam::633697459676:role/compute-github-oidc-role-dev
+          role-session-name: compute-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: "633697459676"
+          mask-aws-account-id: true
+          unset-current-credentials: true
+
+      - name: Assume the Compute deployment role
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: sa-east-1
+          role-to-assume: arn:aws:iam::904054820030:role/compute-terraform-deploy-role
+          role-session-name: compute-${{ github.run_id }}-${{ github.run_attempt }}
+          role-chaining: true
+          allowed-account-ids: "904054820030"
+          mask-aws-account-id: true
+
+      - name: Run Terraform Compute
+        uses: ./.github/actions/terraform-lifecycle
+        with:
+          operation: ${{ inputs.operation }}
+          working-directory: terraform/environments/development/compute
+

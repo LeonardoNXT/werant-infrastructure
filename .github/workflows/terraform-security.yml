@@ -1,0 +1,67 @@
+name: Terraform Security
+run-name: Terraform security ${{ inputs.operation }} by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Terraform operation to execute
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-development-security
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Security ${{ inputs.operation }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: development
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Authenticate with the Management account
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: sa-east-1
+          role-to-assume: arn:aws:iam::633697459676:role/security-github-oidc-role-dev
+          role-session-name: security-${{ github.run_id }}-${{ github.run_attempt }}
+          allowed-account-ids: "633697459676"
+          mask-aws-account-id: true
+          unset-current-credentials: true
+
+      - name: Assume the Security deployment role
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: sa-east-1
+          role-to-assume: arn:aws:iam::904054820030:role/security-terraform-deploy-role
+          role-session-name: security-${{ github.run_id }}-${{ github.run_attempt }}
+          role-chaining: true
+          allowed-account-ids: "904054820030"
+          mask-aws-account-id: true
+
+      - name: Run Terraform Security
+        uses: ./.github/actions/terraform-lifecycle
+        with:
+          operation: ${{ inputs.operation }}
+          working-directory: terraform/environments/development/security
+
