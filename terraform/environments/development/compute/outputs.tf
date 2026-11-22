@@ -19,3 +19,15 @@ output "application_node_power_scheduler" {
     timezone      = local.scheduler.timezone
   }
 }
+
+output "auth_key_rotation_lambda" {
+  description = "Auth Key Rotation Lambda identifiers and private PostgreSQL network contract"
+  value = {
+    alias_arn          = module.auth_key_rotation_lambda.alias_arn
+    alias_name         = module.auth_key_rotation_lambda.alias_name
+    function_arn       = module.auth_key_rotation_lambda.function_arn
+    function_name      = module.auth_key_rotation_lambda.function_name
+    postgres_host      = module.application_node.aws_ec2_instance_private_ip
+    postgres_node_port = local.auth_key_rotation.postgres_node_port
+  }
+}

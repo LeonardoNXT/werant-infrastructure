@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Werant Auth Key Rotation bootstrap placeholder: deploy application code before enabling the scheduler." >&2
+exit 1

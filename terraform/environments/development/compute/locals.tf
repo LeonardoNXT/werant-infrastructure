@@ -36,10 +36,11 @@ locals {
   }
 
   auth_key_rotation = {
-    function_name                  = "werant-auth-key-rotation-dev"
-    kms_key_alias                  = "alias/werant-auth-envelope-encryption-dev"
-    postgres_node_port             = 30432
-    postgres_secret_parameter_name = "/werant/development/auth/postgres"
+    function_name                       = "werant-auth-key-rotation-dev"
+    kms_key_alias                       = "alias/werant-auth-envelope-encryption-dev"
+    postgres_credentials_parameter_name = "/werant/development/auth/postgres"
+    postgres_node_port                  = 30432
+    signing_key_version                 = "v1"
   }
 
   scheduler = {

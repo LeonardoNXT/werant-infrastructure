@@ -34,6 +34,45 @@ module "application_node" {
   })
 }
 
+data "archive_file" "auth_key_rotation_bootstrap" {
+  type        = "zip"
+  source_file = "${path.module}/bootstrap/lambda-placeholder/bootstrap"
+  output_path = "${path.root}/.terraform/werant-auth-key-rotation-bootstrap.zip"
+}
+
+module "auth_key_rotation_lambda" {
+  source = "../../../modules/lambda-function"
+
+  function_name                  = local.auth_key_rotation.function_name
+  description                    = "Rotates Werant signing keys through KMS envelope encryption and PostgreSQL lifecycle transitions."
+  execution_role_arn             = local.identity.auth_key_rotation_lambda_role_arn
+  bootstrap_package_file         = data.archive_file.auth_key_rotation_bootstrap.output_path
+  architecture                   = "arm64"
+  memory_size                    = 128
+  timeout                        = 60
+  reserved_concurrent_executions = 1
+  alias_name                     = "live"
+
+  environment_variables = {
+    AWS_USE_DUALSTACK_ENDPOINT     = "true"
+    KMS_KEY_ID                     = local.auth_key_rotation.kms_key_alias
+    POSTGRES_CREDENTIALS_PARAMETER = local.auth_key_rotation.postgres_credentials_parameter_name
+    POSTGRES_HOST                  = module.application_node.aws_ec2_instance_private_ip
+    POSTGRES_PORT                  = tostring(local.auth_key_rotation.postgres_node_port)
+    SIGNING_KEY_VERSION            = local.auth_key_rotation.signing_key_version
+  }
+
+  vpc_config = {
+    ipv6_allowed_for_dual_stack = true
+    security_group_ids          = [local.network.auth_key_rotation_security_group_id]
+    subnet_ids                  = [local.network.public_subnet_id]
+  }
+
+  tags = merge(local.common_tags, {
+    Workload = "AuthKeyRotation"
+  })
+}
+
 module "application_node_power_scheduler" {
   source = "../../../modules/eventbridge-scheduler"
 
