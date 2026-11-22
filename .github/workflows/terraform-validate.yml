@@ -50,12 +50,15 @@ jobs:
           - terraform/bootstrap/state
           - terraform/bootstrap/identity/federation
           - terraform/bootstrap/identity/development
+          - terraform/environments/development/compute
+          - terraform/environments/development/messaging
           - terraform/environments/development/network
           - terraform/environments/development/security
           - terraform/environments/development/storage
           - terraform/modules/deployment-policy
           - terraform/modules/deployment-roles
           - terraform/modules/ec2-instance
+          - terraform/modules/eventbridge-scheduler
           - terraform/modules/github-oidc-policy
           - terraform/modules/github-oidc-provider
           - terraform/modules/github-roles
@@ -63,6 +66,7 @@ jobs:
           - terraform/modules/lambda-function
           - terraform/modules/public-routing
           - terraform/modules/s3-bucket
+          - terraform/modules/security-group
           - terraform/modules/service-roles
           - terraform/modules/subnet-instance
           - terraform/modules/terraform-apply-policy
