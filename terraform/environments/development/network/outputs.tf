@@ -41,3 +41,13 @@ output "application_security_group_arn" {
   description = "ARN of the Security Group attached to the Development application node"
   value       = module.application_security_group.arn
 }
+
+output "auth_key_rotation_lambda_security_group_id" {
+  description = "ID of the Security Group attached to the Auth Key Rotation Lambda"
+  value       = module.auth_key_rotation_lambda_security_group.id
+}
+
+output "auth_key_rotation_lambda_security_group_arn" {
+  description = "ARN of the Security Group attached to the Auth Key Rotation Lambda"
+  value       = module.auth_key_rotation_lambda_security_group.arn
+}

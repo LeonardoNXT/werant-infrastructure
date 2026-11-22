@@ -36,13 +36,15 @@ variable "vpc_id" {
 }
 
 variable "ingress_rules" {
-  description = "IPv4 ingress rules keyed by a stable Terraform identifier"
+  description = "Ingress rules keyed by a stable Terraform identifier and sourced by exactly one IPv4 CIDR, IPv6 CIDR, or Security Group"
   type = map(object({
-    cidr_ipv4   = string
-    description = string
-    from_port   = number
-    ip_protocol = string
-    to_port     = number
+    cidr_ipv4                    = optional(string)
+    cidr_ipv6                    = optional(string)
+    referenced_security_group_id = optional(string)
+    description                  = string
+    from_port                    = number
+    ip_protocol                  = string
+    to_port                      = number
   }))
   default = {}
 
@@ -50,7 +52,14 @@ variable "ingress_rules" {
     condition = alltrue([
       for key, rule in var.ingress_rules :
       length(trimspace(key)) > 0 &&
-      can(cidrnetmask(rule.cidr_ipv4)) &&
+      length(compact([
+        rule.cidr_ipv4 == null ? "" : rule.cidr_ipv4,
+        rule.cidr_ipv6 == null ? "" : rule.cidr_ipv6,
+        rule.referenced_security_group_id == null ? "" : rule.referenced_security_group_id
+      ])) == 1 &&
+      (rule.cidr_ipv4 == null || (can(cidrnetmask(rule.cidr_ipv4)) && !strcontains(rule.cidr_ipv4, ":"))) &&
+      (rule.cidr_ipv6 == null || (can(cidrhost(rule.cidr_ipv6, 0)) && strcontains(rule.cidr_ipv6, ":"))) &&
+      (rule.referenced_security_group_id == null || can(regex("^sg-([0-9a-f]{8}|[0-9a-f]{17})$", rule.referenced_security_group_id))) &&
       length(trimspace(rule.description)) > 0 &&
       length(rule.description) <= 255 &&
       contains(["-1", "tcp", "udp"], rule.ip_protocol) &&
@@ -60,18 +69,20 @@ variable "ingress_rules" {
         rule.from_port >= 0 && rule.to_port <= 65535 && rule.from_port <= rule.to_port
       )
     ])
-    error_message = "ingress_rules must use valid IPv4 CIDRs, descriptions, tcp/udp port ranges, or protocol -1 with ports set to zero."
+    error_message = "Each ingress rule must use exactly one valid IPv4 CIDR, IPv6 CIDR, or Security Group ID and define a valid description and protocol range."
   }
 }
 
 variable "egress_rules" {
-  description = "IPv4 egress rules keyed by a stable Terraform identifier"
+  description = "Egress rules keyed by a stable Terraform identifier and sourced by exactly one IPv4 CIDR, IPv6 CIDR, or Security Group"
   type = map(object({
-    cidr_ipv4   = string
-    description = string
-    from_port   = number
-    ip_protocol = string
-    to_port     = number
+    cidr_ipv4                    = optional(string)
+    cidr_ipv6                    = optional(string)
+    referenced_security_group_id = optional(string)
+    description                  = string
+    from_port                    = number
+    ip_protocol                  = string
+    to_port                      = number
   }))
   default = {}
 
@@ -79,7 +90,14 @@ variable "egress_rules" {
     condition = alltrue([
       for key, rule in var.egress_rules :
       length(trimspace(key)) > 0 &&
-      can(cidrnetmask(rule.cidr_ipv4)) &&
+      length(compact([
+        rule.cidr_ipv4 == null ? "" : rule.cidr_ipv4,
+        rule.cidr_ipv6 == null ? "" : rule.cidr_ipv6,
+        rule.referenced_security_group_id == null ? "" : rule.referenced_security_group_id
+      ])) == 1 &&
+      (rule.cidr_ipv4 == null || (can(cidrnetmask(rule.cidr_ipv4)) && !strcontains(rule.cidr_ipv4, ":"))) &&
+      (rule.cidr_ipv6 == null || (can(cidrhost(rule.cidr_ipv6, 0)) && strcontains(rule.cidr_ipv6, ":"))) &&
+      (rule.referenced_security_group_id == null || can(regex("^sg-([0-9a-f]{8}|[0-9a-f]{17})$", rule.referenced_security_group_id))) &&
       length(trimspace(rule.description)) > 0 &&
       length(rule.description) <= 255 &&
       contains(["-1", "tcp", "udp"], rule.ip_protocol) &&
@@ -89,7 +107,7 @@ variable "egress_rules" {
         rule.from_port >= 0 && rule.to_port <= 65535 && rule.from_port <= rule.to_port
       )
     ])
-    error_message = "egress_rules must use valid IPv4 CIDRs, descriptions, tcp/udp port ranges, or protocol -1 with ports set to zero."
+    error_message = "Each egress rule must use exactly one valid IPv4 CIDR, IPv6 CIDR, or Security Group ID and define a valid description and protocol range."
   }
 }
 

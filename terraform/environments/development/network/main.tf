@@ -84,3 +84,26 @@ module "application_security_group" {
     Workload = "ApplicationIngress"
   })
 }
+
+module "auth_key_rotation_lambda_security_group" {
+  source = "../../../modules/security-group"
+
+  name        = "werant-dev-auth-key-rotation-lambda"
+  description = "Restricted egress for the Werant Development Auth Key Rotation Lambda"
+  vpc_id      = module.vpc.aws_vpc_id
+
+  egress_rules = {
+    aws_services_https_ipv6 = {
+      cidr_ipv6   = "::/0"
+      description = "Outbound HTTPS to dual-stack AWS KMS and Parameter Store endpoints"
+      from_port   = 443
+      ip_protocol = "tcp"
+      to_port     = 443
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Tier     = "Private"
+    Workload = "AuthKeyRotation"
+  })
+}
