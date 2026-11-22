@@ -8,8 +8,6 @@
 
 Infrastructure as Code powering the Werant ecosystem.
 
-A multi-account AWS infrastructure built with Terraform, designed around isolated resource lifecycles, federated identities, and automated provisioning.
-
 <br />
 
 [![Terraform](https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
@@ -29,434 +27,339 @@ A multi-account AWS infrastructure built with Terraform, designed around isolate
 
 ## Overview
 
-**Werant Infrastructure** is the infrastructure foundation of the Werant platform.
+Werant Infrastructure provisions the AWS foundation used by the Werant Development environment. The repository separates resources by operational lifecycle so that Network, Security, Storage, Compute, and Messaging have independent state, permissions, and deployment workflows.
 
-The project establishes a reproducible, security-oriented approach to provisioning and managing cloud resources across multiple AWS accounts.
+The current implementation provides:
 
-Rather than treating infrastructure as a single deployment unit, Werant organizes resources by their operational lifecycle, allowing independent state management, isolated permissions, and controlled execution.
-
-The architecture is guided by five principles:
-
-- **Isolation by design** — Independent AWS accounts for development, homologation, and production.
-- **Lifecycle ownership** — Infrastructure stacks manage resources with related operational lifecycles.
-- **Least-privilege access** — Federated IAM roles with explicitly scoped permissions.
-- **Reproducible infrastructure** — Declarative Terraform modules with consistent configurations.
-- **Automated operations** — Infrastructure validation and provisioning through GitHub Actions.
+- centralized and encrypted Terraform State in the Management account;
+- GitHub OIDC federation without long-lived AWS credentials;
+- cross-account deployment roles with lifecycle-specific least privilege;
+- a dual-stack Development network;
+- customer-managed KMS keys and encrypted S3 building blocks;
+- an ARM64 EC2 node bootstrapped with K3s and Flux;
+- a private key-rotation Lambda and its runtime identities;
+- EC2 operating-hour schedules and disabled key-rotation schedules;
+- validation plus controlled `plan` and `apply` workflows.
 
 > [!NOTE]
-> The infrastructure is under active development. The architecture described below represents the intended platform design; individual capabilities are introduced incrementally.
-
----
+> Development is implemented first. Homologation and Production remain future environment expansions.
 
 ## Architecture
 
-Werant adopts a multi-account AWS architecture with centralized infrastructure governance and isolated workload execution.
+### AWS accounts
 
-### AWS Account Organization
+| Account | ID | Responsibility |
+| :-- | :-- | :-- |
+| Management | `633697459676` | Terraform State, GitHub OIDC federation, and centralized governance |
+| Development | `904054820030` | Development workloads, runtime identities, and lifecycle deployment roles |
 
-| Account          | Responsibility                                                                      |
-| :--------------- | :---------------------------------------------------------------------------------- |
-| **Management**   | AWS Organizations, identity federation, centralized Terraform State, and governance |
-| **Development**  | Development workloads and infrastructure validation                                 |
-| **Homologation** | Pre-production testing and integration                                              |
-| **Production**   | Production workloads and critical infrastructure                                    |
-
-Each workload account maintains its own resources, IAM permissions, and deployment boundaries.
-
-### Infrastructure Provisioning Flow
-
-```mermaid
-flowchart TD
-    GH["GitHub Actions"] --> OIDC["GitHub OIDC Federation"]
-
-    subgraph MGMT["AWS Management"]
-        OIDC --> FED["Federated IAM Roles"]
-        STATE[("S3 · Terraform State")]
-    end
-
-    FED --> STS["AWS STS · AssumeRole"]
-
-    STS --> DEV["Development"]
-    STS --> HML["Homologation"]
-    STS --> PRD["Production"]
-
-    DEV --> DSL["Lifecycle Stacks"]
-    HML --> HSL["Lifecycle Stacks"]
-    PRD --> PSL["Lifecycle Stacks"]
-
-    DSL -.-> STATE
-    HSL -.-> STATE
-    PSL -.-> STATE
-```
-
-The provisioning model separates three responsibilities:
-
-1. **Authentication** — GitHub Actions authenticates through AWS IAM OIDC federation.
-2. **Authorization** — IAM roles determine which operations a workflow can execute.
-3. **Provisioning** — Terraform manages resources according to the selected lifecycle.
-
-Federated roles and cross-account execution roles are designed to enforce boundaries between environments and infrastructure capabilities.
-
----
-
-## Repository Structure
-
-```text
-werant-infra/
-│
-├── .github/
-│   └── workflows/
-│       └── terraform-validate.yml
-│
-└── terraform/
-    │
-    ├── bootstrap/
-    │   ├── state/
-    │   └── identity/
-    │       └── federation/
-    │
-    └── modules/
-        ├── github-oidc-provider/
-        ├── github-roles/
-        ├── deployment-roles/
-        └── terraform-apply-policy/
-```
-
-The tree illustrates the intended structure. Lifecycle directories and modules are added as their implementations become necessary.
-
-### Directory Responsibilities
-
-| Directory                | Purpose                                             |
-| :----------------------- | :-------------------------------------------------- |
-| `.github/workflows`      | Terraform formatting and validation workflow         |
-| `terraform/bootstrap`    | Initial infrastructure and identity provisioning    |
-| `terraform/modules`      | Reusable Terraform child modules                    |
-
-Environment-specific root modules remain roadmap items and will be added when their corresponding infrastructure is implemented.
-
----
-
-## Terraform Design
-
-### Lifecycle-Based Infrastructure
-
-Infrastructure is divided into independent lifecycle units.
-
-Each lifecycle is represented by a Terraform root module, responsible for managing a related collection of AWS resources.
-
-```text
-development/
-├── network/
-│   └── terraform.tfstate
-│
-├── compute/
-│   └── terraform.tfstate
-│
-└── database/
-    └── terraform.tfstate
-```
-
-A lifecycle can include multiple resources, but its state remains independent from other lifecycles.
-
-For example:
-
-| Lifecycle | Resource scope                                   |
-| :-------- | :----------------------------------------------- |
-| Network   | VPC, subnets, routing, security groups           |
-| Compute   | EC2, ECS, Lambda, compute-related resources      |
-| Database  | Database instances and associated infrastructure |
-| Storage   | Object storage and storage policies              |
-| Identity  | IAM roles, policies, and federation              |
-
-Resource ownership is defined by lifecycle boundaries rather than individual AWS services alone.
-
-### Reusable Modules
-
-Child modules encapsulate resource definitions, default configurations, and infrastructure conventions.
-
-Root modules compose these abstractions into deployable infrastructure stacks.
-
-```hcl
-module "network" {
-  source = "../../../modules/network"
-
-  environment = "development"
-  vpc_cidr    = "10.10.0.0/16"
-}
-```
-
-This approach minimizes repeated Terraform configuration while preserving explicit infrastructure ownership.
-
----
-
-## State Management
-
-Terraform State is stored in a centralized Amazon S3 bucket owned by the AWS Management account.
-
-Each lifecycle has an independent object key.
-
-```text
-S3 · werant-tfstate-<management-account-id>
-│
-├── bootstrap/
-│   ├── terraform.tfstate
-│   └── identity/
-│       └── federation/
-│           └── terraform.tfstate
-│
-├── development/
-│   ├── network/
-│   └── compute/
-│
-├── homologation/
-│   ├── network/
-│   └── compute/
-│
-└── production/
-    ├── network/
-    └── compute/
-```
-
-### Backend Configuration
-
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "werant-tfstate-<management-account-id>"
-    key          = "development/network/terraform.tfstate"
-    region       = "sa-east-1"
-
-    encrypt      = true
-    use_lockfile = true
-  }
-}
-```
-
-The backend provides:
-
-- Centralized remote state storage.
-- Independent state files per lifecycle.
-- Native S3 state locking.
-- Bucket versioning for state recovery.
-- Server-side encryption with a customer-managed KMS key and bucket keys.
-- HTTPS-only access enforced by bucket policy.
-- Rejection of explicit encryption headers that attempt to bypass the state KMS key.
-- Restricted cross-account access.
-
-State permissions are designed to be scoped to the corresponding environment and lifecycle.
-
----
-
-## Identity & Access Management
-
-Werant uses AWS IAM and OpenID Connect to authenticate infrastructure workflows without relying on long-lived AWS access keys.
-
-### GitHub OIDC Federation
-
-A centralized OIDC identity provider establishes trust between GitHub Actions and AWS.
-
-```text
-GitHub Actions
-      |
-      | OIDC Token
-      v
-AWS IAM OIDC Provider
-      |
-      | AssumeRoleWithWebIdentity
-      v
-Federated IAM Role
-      |
-      | STS AssumeRole
-      v
-Environment Execution Role
-      |
-      v
-Terraform Provisioning
-```
-
-The intended identity model provides:
-
-- Centralized GitHub OIDC federation.
-- Environment and lifecycle-specific execution permissions.
-- Explicit cross-account IAM trust relationships.
-- Temporary AWS credentials.
-- Controlled workflow authorization.
-- Separation between bootstrap and deployment privileges.
-
-### Trust Boundaries
-
-Federated trust policies are designed to validate GitHub OIDC claims such as:
-
-| Claim              | Purpose                                                  |
-| :----------------- | :------------------------------------------------------- |
-| `aud`              | Validate the intended AWS STS audience                   |
-| `sub`              | Restrict the authorized repository and execution context |
-| `repository_id`    | Bind access to an immutable repository identity          |
-| `ref`              | Restrict the Git reference                               |
-| `repository_owner_id` | Bind access to an immutable repository owner identity |
-| `environment`      | Restrict access to an approved GitHub environment         |
-
-Claim conditions must be validated against actual GitHub-issued tokens and supported AWS IAM condition keys.
-
-The current trust policy combines the immutable repository and owner IDs with the `main` ref and the `development` environment. GitHub environment protection rules must be configured before deployment workflows are enabled.
-
----
-
-## Bootstrap
-
-The bootstrap layer provisions the foundational resources required before regular infrastructure deployment can begin.
-
-It is executed through a dedicated administrative identity.
-
-### State Bootstrap
-
-Responsible for provisioning and protecting the centralized Terraform backend.
-
-- Amazon S3 bucket.
-- Bucket versioning.
-- Server-side encryption.
-- Customer-managed KMS key with automatic rotation.
-- Bucket policy enforcing TLS and the expected KMS key.
-- Public access blocking.
-- Object ownership configuration.
-- Accidental deletion protection.
-
-The initial bootstrap uses local Terraform State until the S3 backend becomes available.
-
-### Identity Bootstrap
-
-Responsible for establishing the identities required for automated infrastructure execution.
-
-- GitHub OIDC identity provider.
-- Federated IAM roles.
-- Cross-account trust relationships.
-- Lifecycle deployment permissions.
-
-The identity bootstrap is separated from regular infrastructure deployments to avoid circular authorization dependencies.
-
----
-
-## CI/CD Strategy
-
-Terraform formatting and validation are performed through GitHub Actions. Automated plan and apply remain roadmap items.
-
-The pipeline architecture is designed around independent root modules and controlled execution permissions.
-
-### Deployment Lifecycle
+### Provisioning flow
 
 ```mermaid
 flowchart LR
-    A["Pull Request"] --> B["Terraform Format"]
-    B --> C["Terraform Init · backend disabled"]
-    C --> D["Terraform Validate"]
-    D -. "roadmap" .-> E["Terraform Plan"]
-    E -. "roadmap" .-> F["Approval and Apply"]
+    GH["GitHub lifecycle workflow"] --> OIDC["Management OIDC role"]
+    OIDC -->|STS AssumeRole| DEPLOY["Development deployment role"]
+    DEPLOY --> TF["Terraform lifecycle root"]
+    TF --> AWS["Development resources"]
+    TF --> STATE[("Management S3 State")]
 ```
 
-### Execution Principles
+Authentication and authorization are intentionally separate:
 
-**Change isolation**
+1. GitHub obtains an OIDC token for the `development` environment.
+2. The token assumes the lifecycle's federated role in Management.
+3. That role can assume only the matching deployment role in Development.
+4. Terraform uses the Development role to manage resources and its own State object.
 
-Validation runs independently for each current root and child module. Deployment change detection will be introduced with environment root modules.
+### Development lifecycles
 
-**Credential isolation**
+| Lifecycle | Owned resources |
+| :-- | :-- |
+| Network | VPC, IPv4/IPv6 subnet, Internet Gateway, egress-only IPv6 gateway, routes, and Security Groups |
+| Security | Auth envelope-encryption KMS key and application-storage KMS key |
+| Storage | KMS-encrypted, versioned, private S3 buckets supplied through the `buckets` input |
+| Compute | ARM64 EC2 node, K3s/Flux bootstrap, EC2 schedules, Lambda, CloudWatch log group, and Lambda alias |
+| Messaging | EventBridge Scheduler group and Auth key-rotation schedules |
 
-Each execution assumes the IAM role authorized for its environment and lifecycle.
+The root modules discover their live AWS dependencies through known names and mandatory tags. They do not read or mutate another lifecycle's Terraform State.
 
-**Plan verification**
+### Runtime topology
 
-Infrastructure changes should be validated before applying them.
+```mermaid
+flowchart TD
+    INTERNET["Internet"] -->|80 / 443| TRAEFIK["Traefik on K3s"]
 
-**Production protection**
+    subgraph VPC["Development dual-stack VPC"]
+        EC2["EC2 r6g.large · ARM64"]
+        K3S["Single-node K3s"]
+        FLUX["Flux controllers"]
+        PG["PostgreSQL NodePort 30432"]
+        LAMBDA["Auth key-rotation Lambda"]
 
-Production deployments require additional authorization and approval controls.
+        EC2 --> K3S
+        K3S --> TRAEFIK
+        K3S --> FLUX
+        K3S --> PG
+        LAMBDA -->|Security Group to Security Group| PG
+    end
 
-**Traceability**
+    FLUX -->|HTTPS polling| PLATFORM["werant-platform"]
+    LAMBDA -->|IPv6 HTTPS| KMS["AWS KMS"]
+    LAMBDA -->|IPv6 HTTPS| SSM["AWS Parameter Store"]
+```
 
-Infrastructure changes remain associated with version-controlled commits and workflow executions.
+The EC2 node uses a 30 GiB encrypted GP3 root volume and a public IPv4 address. Only HTTP and HTTPS ingress are public. PostgreSQL port `30432` is authorized exclusively from the Lambda Security Group and is never exposed to the internet.
 
----
+Flux watches `LeonardoNXT/werant-platform`, branch `main`, path `./clusters/development`. Application and data workloads belong to that GitOps repository rather than to Terraform.
 
-## Security Principles
+## Repository structure
 
-Security is treated as an architectural requirement rather than a post-deployment feature.
+```text
+.
+├── .github
+│   ├── actions
+│   │   └── terraform-lifecycle
+│   │       └── action.yml
+│   └── workflows
+│       ├── terraform-validate.yml
+│       ├── terraform-network.yml
+│       ├── terraform-security.yml
+│       ├── terraform-storage.yml
+│       ├── terraform-compute.yml
+│       └── terraform-messaging.yml
+└── terraform
+    ├── bootstrap
+    │   ├── state
+    │   └── identity
+    │       ├── federation
+    │       └── development
+    ├── environments
+    │   └── development
+    │       ├── network
+    │       ├── security
+    │       ├── storage
+    │       ├── compute
+    │       └── messaging
+    └── modules
+        ├── deployment-policy
+        ├── deployment-roles
+        ├── ec2-instance
+        ├── eventbridge-scheduler
+        ├── github-oidc-policy
+        ├── github-oidc-provider
+        ├── github-roles
+        ├── kms-key
+        ├── lambda-function
+        ├── public-routing
+        ├── s3-bucket
+        ├── security-group
+        ├── service-roles
+        ├── subnet-instance
+        ├── terraform-apply-policy
+        └── vpc-instance
+```
 
-| Control               | Strategy                               |
-| :-------------------- | :------------------------------------- |
-| Authentication        | GitHub OIDC federation                 |
-| Authorization         | IAM least-privilege policies           |
-| Environment isolation | Separate AWS accounts                  |
-| State protection      | S3 encryption, versioning, and locking |
-| Credential management | Temporary STS credentials              |
-| Deployment validation | Terraform plan and policy evaluation   |
-| Production governance | Protected deployment workflows         |
-| Resource boundaries   | Lifecycle-based ownership              |
+Bootstrap is deliberately excluded from GitHub deployment workflows. It is an administrative foundation and must be operated locally through an authorized AWS Identity Center session.
 
-> [!IMPORTANT]
-> Terraform root modules do not automatically establish IAM security boundaries. Permissions must be enforced through the execution roles, trust policies, and applicable AWS account controls.
+## Terraform State
 
----
+State is stored in `werant-tfstate-633697459676` in the Management account.
 
-## Development
+```text
+werant-tfstate-633697459676
+├── bootstrap/terraform.tfstate
+├── bootstrap/identity/federation/terraform.tfstate
+├── bootstrap/identity/development/terraform.tfstate
+└── development
+    ├── network/terraform.tfstate
+    ├── security/terraform.tfstate
+    ├── storage/terraform.tfstate
+    ├── compute/terraform.tfstate
+    └── messaging/terraform.tfstate
+```
+
+State protections include:
+
+- public-access blocking and bucket-owner-enforced ownership;
+- versioning and S3 native lockfiles;
+- customer-managed KMS encryption with bucket keys;
+- bucket-policy denial of non-TLS traffic;
+- denial of uploads with an unexpected encryption algorithm or KMS key;
+- `prevent_destroy` on the State bucket and KMS key;
+- lifecycle roles restricted to their own State object and lockfile.
+
+## Identity and access
+
+Every lifecycle owns two identities:
+
+- a federated role in Management, assumed through GitHub OIDC;
+- a deployment role in Development, assumed from that federated role.
+
+The OIDC trust policy validates:
+
+| Claim | Constraint |
+| :-- | :-- |
+| `aud` | `sts.amazonaws.com` |
+| `sub` | Immutable owner/repository IDs and the `development` environment |
+| `repository_owner_id` | LeonardoNXT's immutable owner ID |
+| `repository_id` | `werant-infrastructure` immutable repository ID |
+| `environment` | `development` |
+| `ref` | `refs/heads/main` |
+| `job_workflow_ref` | Exact lifecycle workflow file on `main` |
+
+Consequently, a Network workflow cannot assume the Compute role, and another workflow in the same repository cannot reuse a lifecycle's federated identity.
+
+The independent `werant-key-rotation` repository has its own OIDC role and can update function code, publish a version, and promote the `live` alias. It cannot invoke the Lambda, modify its configuration, or pass runtime roles.
+
+## CI/CD
+
+### Continuous validation
+
+`terraform-validate.yml` runs on relevant pull requests and pushes to `main`:
+
+- `terraform fmt -check -recursive -diff`;
+- `terraform init -backend=false`;
+- `terraform validate` for every implemented root and child module.
+
+Validation never authenticates to AWS and never changes infrastructure.
+
+### Lifecycle deployments
+
+| Workflow | Root module | Management OIDC role | Development deployment role |
+| :-- | :-- | :-- | :-- |
+| `terraform-network.yml` | `development/network` | `network-github-oidc-role-dev` | `network-terraform-deploy-role` |
+| `terraform-security.yml` | `development/security` | `security-github-oidc-role-dev` | `security-terraform-deploy-role` |
+| `terraform-storage.yml` | `development/storage` | `storage-github-oidc-role-dev` | `storage-terraform-deploy-role` |
+| `terraform-compute.yml` | `development/compute` | `compute-github-oidc-role-dev` | `compute-terraform-deploy-role` |
+| `terraform-messaging.yml` | `development/messaging` | `messaging-github-oidc-role-dev` | `messaging-terraform-deploy-role` |
+
+Each workflow is started manually with `workflow_dispatch` on `main`. The `operation` input defaults to `plan` and permits `apply` only as an explicit choice.
+
+The shared composite action performs:
+
+1. operation validation;
+2. Terraform setup;
+3. formatting check;
+4. backend initialization;
+5. configuration validation;
+6. plan creation as `tfplan`;
+7. application of that exact plan when `operation=apply`.
+
+Plans are not uploaded as artifacts because they can contain sensitive values and can become stale. `apply` creates and consumes its plan in the same serialized job.
+
+The composite action does not authenticate or select roles. Authentication remains visible and independently restrictable in each lifecycle workflow.
+
+### GitHub environment
+
+The repository must have an environment named `development`. Configure it with:
+
+- deployment branch restricted to `main`;
+- required reviewers when every Development lifecycle execution should be approved;
+- no static AWS credentials.
+
+Both `plan` and `apply` use temporary OIDC credentials. The workflow requests only `contents: read` and `id-token: write`.
+
+## Deployment order
+
+### Bootstrap — local administration
+
+Bootstrap requires an authorized AWS Identity Center session and is never run by the lifecycle workflows.
+
+1. Provision `terraform/bootstrap/state` initially with the backend disabled.
+2. Migrate its local State into the newly created S3 backend.
+3. Apply `terraform/bootstrap/identity/federation` in Management.
+4. Apply `terraform/bootstrap/identity/development` in Development, supplying the State KMS key ARN.
+
+Review every Bootstrap plan before applying it. The Identity roots create and modify the roles that authorize all subsequent automation.
+
+### Development lifecycles
+
+After Bootstrap, execute both `plan` and `apply` in this order:
+
+1. Network
+2. Security
+3. Storage
+4. Compute
+5. Messaging
+
+Storage depends on the Security KMS alias. Compute discovers Network and Identity resources. Messaging discovers the Lambda alias created by Compute.
+
+## Operational notes
+
+### EC2 operating hours
+
+All schedules use `America/Sao_Paulo`:
+
+| Period | Start | Stop |
+| :-- | :-- | :-- |
+| Monday through Friday | 18:00 | 00:00 |
+| Saturday and Sunday | 14:00 | 23:00 |
+
+### Auth key rotation
+
+Terraform creates the Lambda from a failing placeholder package so the function can exist before the application repository performs its first code deployment. Terraform ignores subsequent function-code and alias-version changes because those fields belong to `werant-key-rotation` CI/CD.
+
+The rotation schedules are defined but intentionally `DISABLED`:
+
+- weekdays: every 10 minutes from 18:00 through 23:50;
+- weekends: every 10 minutes from 14:00 through 22:50.
+
+Enable them only after all of the following are true:
+
+- the real ARM64 `bootstrap` ZIP is deployed and the `live` alias is promoted;
+- `/werant/development/auth/postgres` exists as an SSM `SecureString`;
+- PostgreSQL is healthy inside K3s and privately reachable on NodePort `30432`;
+- a manual Lambda invocation completes successfully.
+
+The Parameter Store value is intentionally outside Terraform so plaintext database credentials never enter Terraform State.
+
+### Storage buckets
+
+The Storage root is reusable and defaults to an empty `buckets` map. Add workload buckets explicitly with globally unique `werant-dev-*` names and lifecycle rules. Every managed bucket is private, versioned, TLS-only, and encrypted with the application-storage KMS key.
+
+## Local development
 
 ### Requirements
 
-- Terraform CLI
-- AWS CLI v2
-- AWS IAM Identity Center access
-- Git
-- Authorized AWS accounts and IAM roles
+- Terraform CLI `>= 1.10.0`;
+- AWS CLI v2 and AWS IAM Identity Center access for Bootstrap;
+- Git;
+- access to the Management and Development accounts appropriate to the operation.
 
-### Local Validation
-
-Terraform configurations can be formatted and validated locally.
+### Formatting and validation
 
 ```bash
-terraform fmt -recursive
+terraform fmt -check -recursive -diff
 ```
 
-For a specific root module:
+For a root module without initializing its remote backend:
 
 ```bash
-cd terraform/bootstrap/identity/development
-
-terraform init -backend=false
-terraform validate
+terraform -chdir=terraform/environments/development/network init -backend=false
+terraform -chdir=terraform/environments/development/network validate
 ```
 
-### Infrastructure Deployment
+Regular Development `apply` operations must use GitHub Actions. Local apply is reserved for the documented Bootstrap process.
 
-Regular environment deployments are managed through GitHub Actions rather than local `terraform apply` executions.
+## Implementation status
 
-The bootstrap remains an explicitly controlled administrative operation.
+- [x] Centralized and protected Terraform State.
+- [x] GitHub OIDC federation and cross-account role chaining.
+- [x] Lifecycle-specific IAM roles and State permissions.
+- [x] Network, Security, Storage, Compute, and Messaging roots.
+- [x] Automated formatting and validation.
+- [x] Controlled lifecycle `plan` and `apply` workflows.
+- [ ] Execute and verify the first complete Development deployment.
+- [ ] Enable Auth key-rotation schedules after runtime readiness checks.
+- [ ] Expand the architecture to Homologation and Production.
 
----
-
-## Roadmap
-
-- [x] Define the multi-account infrastructure architecture.
-- [x] Establish the Terraform repository structure.
-- [x] Configure initial AWS Identity Center access.
-- [ ] Complete centralized Terraform State bootstrap.
-- [ ] Complete GitHub OIDC federation.
-- [ ] Implement lifecycle-specific IAM roles.
-- [ ] Establish cross-account state permissions.
-- [ ] Implement automated Terraform plan and apply.
-- [ ] Introduce infrastructure policy validation.
-- [ ] Provision the initial Development infrastructure.
-- [ ] Expand infrastructure to Homologation and Production.
-
----
-
-## Engineering Philosophy
+## Engineering philosophy
 
 Werant Infrastructure is designed around a simple principle:
 
 **Complexity should be controlled through explicit boundaries, not hidden behind automation.**
 
-Infrastructure components should have clear ownership, predictable behavior, isolated state, and auditable execution.
-
-Automation exists to eliminate repetitive operations without removing visibility or control over the systems being managed.
+Infrastructure components have clear ownership, predictable behavior, isolated State, and auditable execution. Automation removes repetitive operations without removing visibility or control.
 
 ---
 
