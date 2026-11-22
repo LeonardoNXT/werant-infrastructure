@@ -31,13 +31,13 @@ variable "execution_role_arn" {
   }
 }
 
-variable "package_file" {
-  description = "Path to the Lambda ZIP deployment package"
+variable "bootstrap_package_file" {
+  description = "Path to the initial Lambda ZIP used only when Terraform creates the function"
   type        = string
 
   validation {
-    condition     = endswith(lower(var.package_file), ".zip")
-    error_message = "package_file must reference a ZIP file."
+    condition     = endswith(lower(var.bootstrap_package_file), ".zip")
+    error_message = "bootstrap_package_file must reference a ZIP file."
   }
 }
 

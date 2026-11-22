@@ -9,7 +9,7 @@ output "function_name" {
 }
 
 output "function_version" {
-  description = "Published Lambda function version"
+  description = "Lambda version observed by Terraform; application deployments may publish newer versions"
   value       = aws_lambda_function.function.version
 }
 

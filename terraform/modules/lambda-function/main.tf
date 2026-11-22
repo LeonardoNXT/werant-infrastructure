@@ -9,8 +9,8 @@ resource "aws_lambda_function" "function" {
   description   = var.description
   role          = var.execution_role_arn
 
-  filename         = var.package_file
-  source_code_hash = filebase64sha256(var.package_file)
+  filename         = var.bootstrap_package_file
+  source_code_hash = filebase64sha256(var.bootstrap_package_file)
   handler          = var.handler
   runtime          = var.runtime
   architectures    = [var.architecture]
@@ -31,6 +31,13 @@ resource "aws_lambda_function" "function" {
   tags = var.tags
 
   depends_on = [aws_cloudwatch_log_group.function]
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
 }
 
 resource "aws_lambda_alias" "deployment" {
@@ -38,4 +45,8 @@ resource "aws_lambda_alias" "deployment" {
   description      = "Stable deployment alias for ${var.function_name}"
   function_name    = aws_lambda_function.function.function_name
   function_version = aws_lambda_function.function.version
+
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
